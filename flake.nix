@@ -106,6 +106,8 @@ EOL
             ANTHROPIC_API_KEY = cfg.anthropicApiKey;
           } // lib.optionalAttrs (cfg.openaiApiKey != null) {
             OPENAI_API_KEY = cfg.openaiApiKey;
+          } // lib.optionalAttrs (cfg.enableHttps) {
+            HTTPS_PORT = toString cfg.sslPort;
           };
           
           # Import the SSL proxy service module
@@ -122,20 +124,8 @@ EOL
             
             port = mkOption {
               type = types.port;
-              default = 9696;  # HTTP port
+              default = 6969;  # HTTP port
               description = "Port on which the MCP server will listen";
-            };
-            
-            sslPort = mkOption {
-              type = types.port;
-              default = 6969;  # HTTPS port
-              description = "Port on which the HTTPS proxy will listen";
-            };
-            
-            enableHttps = mkOption {
-              type = types.bool;
-              default = false;
-              description = "Whether to enable HTTPS via local-ssl-proxy";
             };
             
             httpsPort = mkOption {
