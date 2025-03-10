@@ -79,8 +79,8 @@
 
         // Start the server
         app.listen(port, () => {
-          console.log(`MCP server listening at http://localhost:${port}`);
-          console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+          console.log('MCP server listening at http://localhost:' + port);
+          console.log('Allowed origins: ' + allowedOrigins.join(', '));
         });
       '';
 
@@ -136,38 +136,10 @@
             "@anthropic-ai/sdk": "^0.17.1",
             "cors": "^2.8.5",
             "dotenv": "^16.4.1",
-            "express": "^4.18.2",
-            "local-ssl-proxy": "^2.0.0"
+            "express": "^4.18.2"
           }
         }
       '';
-
-      # SSL proxy service implementation
-      sslProxyService = { config, lib, pkgs }:
-        let
-          cfg = config.services.mcp-server;
-        in {
-          config = lib.mkIf (cfg.enable && cfg.enableHttps) {
-            systemd.services.mcp-ssl-proxy = {
-              description = "SSL Proxy for MCP Server";
-              after = [ "mcp-server.service" "network.target" ];
-              requires = [ "mcp-server.service" ];
-              wantedBy = [ "multi-user.target" ];
-              
-              serviceConfig = {
-                Type = "simple";
-                User = cfg.user;
-                Group = cfg.group;
-                ExecStart = "${cfg.package}/bin/mcp-ssl-proxy --source ${toString cfg.sslPort} --target ${toString cfg.port}";
-                Restart = "on-failure";
-                
-                # Hardening
-                NoNewPrivileges = true;
-                PrivateTmp = true;
-              };
-            };
-          };
-        };
     in
     flake-utils-plus.lib.mkFlake {
       inherit self inputs;
@@ -197,18 +169,21 @@
             mkdir -p $out/lib $out/bin
             
             # Create source files from the content defined in the flake
-            echo ${builtins.toJSON serverContent} > $out/lib/server.js
-            echo ${builtins.toJSON modelsContent} > $out/lib/models.js
-            echo ${builtins.toJSON packageJsonContent} > $out/lib/package.json
+            cat > $out/lib/server.js << 'EOF'
+            ${serverContent}
+            EOF
+            
+            cat > $out/lib/models.js << 'EOF'
+            ${modelsContent}
+            EOF
+            
+            cat > $out/lib/package.json << 'EOF'
+            ${packageJsonContent}
+            EOF
             
             # Create the main wrapper script
             makeWrapper ${pkgs.nodejs_20}/bin/node $out/bin/mcp-server \
               --add-flags "$out/lib/server.js" \
-              --set NODE_PATH "$out/lib/node_modules"
-            
-            # Create a wrapper for local-ssl-proxy
-            makeWrapper ${pkgs.nodejs_20}/bin/npx $out/bin/mcp-ssl-proxy \
-              --add-flags "local-ssl-proxy" \
               --set NODE_PATH "$out/lib/node_modules"
             
             # Install dependencies
@@ -237,7 +212,7 @@
               cat > .env << EOL
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
-PORT=9696
+PORT=6969
 ALLOWED_ORIGINS=http://localhost:8000,https://app.cursor.sh
 EOL
             fi
@@ -267,10 +242,8 @@ EOL
             ANTHROPIC_API_KEY = cfg.anthropicApiKey;
           } // lib.optionalAttrs (cfg.openaiApiKey != null) {
             OPENAI_API_KEY = cfg.openaiApiKey;
-          } // lib.optionalAttrs (cfg.enableHttps) {
-            HTTPS_PORT = toString cfg.sslPort;
           };
-        in lib.recursiveUpdate (sslProxyService { inherit config lib pkgs; }) {
+        in {
           options.services.mcp-server = with lib; {
             enable = mkEnableOption "MCP server for AI-enabled tools";
             
@@ -282,20 +255,8 @@ EOL
             
             port = mkOption {
               type = types.port;
-              default = 9696;  # HTTP port
+              default = 6969;
               description = "Port on which the MCP server will listen";
-            };
-            
-            sslPort = mkOption {
-              type = types.port;
-              default = 6969;  # HTTPS port
-              description = "Port on which the HTTPS proxy will listen";
-            };
-            
-            enableHttps = mkOption {
-              type = types.bool;
-              default = false;
-              description = "Whether to enable HTTPS via local-ssl-proxy";
             };
             
             allowedOrigins = mkOption {
@@ -388,8 +349,6 @@ EOL
             ANTHROPIC_API_KEY = cfg.anthropicApiKey;
           } // lib.optionalAttrs (cfg.openaiApiKey != null) {
             OPENAI_API_KEY = cfg.openaiApiKey;
-          } // lib.optionalAttrs (cfg.enableHttps) {
-            HTTPS_PORT = toString cfg.sslPort;
           };
         in {
           options.services.mcp-server = with lib; {
@@ -403,20 +362,8 @@ EOL
             
             port = mkOption {
               type = types.port;
-              default = 9696;  # HTTP port
+              default = 6969;
               description = "Port on which the MCP server will listen";
-            };
-            
-            sslPort = mkOption {
-              type = types.port;
-              default = 6969;  # HTTPS port
-              description = "Port on which the HTTPS proxy will listen";
-            };
-            
-            enableHttps = mkOption {
-              type = types.bool;
-              default = false;
-              description = "Whether to enable HTTPS via local-ssl-proxy";
             };
             
             allowedOrigins = mkOption {
