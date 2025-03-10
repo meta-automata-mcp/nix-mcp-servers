@@ -1,371 +1,327 @@
 {
-  description = "Inkustrator customizations for Inkscape on macOS - provides Illustrator-like UI and shortcuts";
+  description = "Cross-platform MCP Server for AI-enabled tools";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    mac-app-util.url = "github:hraban/mac-app-util";
-    flake-utils.url = "github:numtide/flake-utils";
+    flake-utils-plus.url = "github:gytis-ivaskevicius/flake-utils-plus";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    mac-app-util,
-    flake-utils,
-  }:
-    flake-utils.lib.eachSystem ["aarch64-darwin" "x86_64-darwin"] (system: let
-      pkgs = nixpkgs.legacyPackages.${system};
-      lib = pkgs.lib;
+  outputs = { self, nixpkgs, flake-utils-plus, ... }@inputs:
+    flake-utils-plus.lib.mkFlake {
+      inherit self inputs;
 
-      # System-specific configuration
-      systemConfig = {
-        aarch64-darwin = {
-          archName = "Apple Silicon";
-          inkscapeBinary = "${pkgs.inkscape}/bin/inkscape";
-        };
-        x86_64-darwin = {
-          archName = "Intel";
-          inkscapeBinary = "${pkgs.inkscape}/bin/inkscape";
-        };
-      };
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
 
-      inkustratorSrcInfo = {
-        owner = "lucasgabmoreno";
-        repo = "inkustrator";
-        rev = "main";
-        sha256 = "sha256-mk0hH8cB7Pxj/eqfJld8RMAB1PJqdFi3x+/tI7bzEeo=";
-      };
-
-      inkustratorSrc = pkgs.fetchFromGitHub inkustratorSrcInfo;
-
-      # Create a derivation for the Inkustrator config
-      inkustratorConfigSetup = pkgs.stdenv.mkDerivation {
-        name = "inkustrator-config-setup";
-        src = inkustratorSrc;
-
-        buildPhase = ''
-          # Create base configuration structure
-          mkdir -p config/inkscape/keys
-          mkdir -p config/inkscape/palettes
-          mkdir -p config/inkscape/templates
-          mkdir -p config/inkscape/ui
-
-          # Create keyboard shortcuts file
-          cat > config/inkscape/keys/default.xml << EOF
-          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-          <keys name="Inkustrator">
-            <!-- Adobe Illustrator-like shortcuts -->
-            <bind key="a" modifiers="Ctrl" action="select-all"/>
-            <bind key="d" modifiers="Ctrl" action="duplicate"/>
-            <bind key="z" modifiers="Ctrl" action="undo"/>
-            <bind key="y" modifiers="Ctrl" action="redo"/>
-            <bind key="x" modifiers="Ctrl" action="cut"/>
-            <bind key="c" modifiers="Ctrl" action="copy"/>
-            <bind key="v" modifiers="Ctrl" action="paste"/>
-            <bind key="g" modifiers="Ctrl" action="selection-group"/>
-            <bind key="u" modifiers="Ctrl" action="selection-ungroup"/>
-            <bind key="l" modifiers="Ctrl" action="object-lock"/>
-            <bind key="h" modifiers="Ctrl" action="object-hide"/>
-            <bind key="m" action="tool-measure"/>
-            <bind key="v" action="tool-select"/>
-            <bind key="a" action="tool-node"/>
-            <bind key="p" action="tool-pen"/>
-            <bind key="t" action="tool-text"/>
-            <bind key="r" action="tool-rect"/>
-            <bind key="e" action="tool-ellipse"/>
-            <bind key="b" action="tool-gradient"/>
-            <bind key="i" action="tool-dropper"/>
-            <bind key="c" action="tool-crop"/>
-            <bind key="h" action="tool-tweak"/>
-            <!-- Add more shortcuts as needed -->
-          </keys>
-          EOF
-
-          # Create UI configuration
-          cat > config/inkscape/ui/default.xml << EOF
-          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-          <keys name="Inkustrator">
-            <group id="toolbox">
-              <group id="tools" />
-              <group id="commands" />
-            </group>
-            <group id="dialogs">
-              <group id="fill-stroke" state="1" />
-              <group id="layers" state="1" />
-              <group id="objects" state="1" />
-              <group id="swatches" state="1" />
-            </group>
-          </keys>
-          EOF
-
-          # Create default template
-          cat > config/inkscape/templates/default.svg << EOF
-          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-          <svg
-             width="210mm"
-             height="297mm"
-             viewBox="0 0 210 297"
-             version="1.1"
-             xmlns="http://www.w3.org/2000/svg">
-            <rect
-               style="fill:#808080;fill-opacity:0.1"
-               width="210"
-               height="297"
-               x="0"
-               y="0" />
-          </svg>
-          EOF
-        '';
-
-        installPhase = ''
-          mkdir -p $out/config
-          cp -r config/* $out/config/
-          touch $out/config/.inkustrator_installed
-        '';
-      };
-
-      # Get the icon
-      inkustratorIcon = pkgs.stdenv.mkDerivation {
-        name = "inkustrator-icon";
-        src = inkustratorSrc;
-
-        installPhase = ''
-          mkdir -p $out
-          cp $src/inkustrator.png $out/icon.png
-        '';
-      };
-
-      # Create wrapper script
-      inkscape-wrapper = let
-        configDir = "$HOME/.inkustrator-config";
-        inkscapeConfigDir = "$HOME/Library/Application Support/org.inkscape.Inkscape/config/inkscape";
-
-        # Create a script to handle config setup and cleanup
-        configScript = pkgs.writeScript "inkustrator-config" ''
-          #!${pkgs.bash}/bin/bash
-
-          # Check if we're running on the correct architecture
-          if [ "$(uname -m)" = "arm64" ] && [ "${system}" != "aarch64-darwin" ]; then
-            echo "Warning: You are running on Apple Silicon but using the Intel version"
-          elif [ "$(uname -m)" = "x86_64" ] && [ "${system}" != "x86_64-darwin" ]; then
-            echo "Warning: You are running on Intel but using the Apple Silicon version"
-          fi
-
-          # Ensure config directories exist
-          mkdir -p '${configDir}' "$(dirname '${inkscapeConfigDir}')"
-
-          # Install Inkustrator config if needed
-          if [ ! -f '${configDir}/.inkustrator_installed' ] || [ -z "$(ls -A '${configDir}')" ]; then
-            echo "Setting up Inkustrator configuration..."
-            rm -rf '${configDir}'/*
-            cp -r ${inkustratorConfigSetup}/config/* '${configDir}/' 2>/dev/null || true
-          fi
-
-          # Backup and link config
-          if [ -e '${inkscapeConfigDir}' ] && [ ! -L '${inkscapeConfigDir}' ]; then
-            mv '${inkscapeConfigDir}' '${inkscapeConfigDir}.backup.$$'
-          fi
-          ln -sf '${configDir}' '${inkscapeConfigDir}'
-
-          # Start Inkscape
-          exec "$@"
-        '';
-      in
-        pkgs.stdenv.mkDerivation {
-          name = "inkscape-wrapper";
-          buildInputs = [pkgs.makeWrapper];
-
-          dontUnpack = true;
-
+      outputsBuilder = channels: let
+        pkgs = channels.nixpkgs;
+      in {
+        # Default package for all platforms
+        packages.default = pkgs.stdenv.mkDerivation {
+          name = "nix-mcp-server";
+          version = "1.0.0";
+          src = ./.;
+          
+          nativeBuildInputs = [ pkgs.makeWrapper ];
+          buildInputs = [ pkgs.nodejs_20 ];
+          
+          phases = [ "unpackPhase" "installPhase" ];
+          
           installPhase = ''
-            mkdir -p $out/bin $out/share/inkustrator
-            makeWrapper ${configScript} $out/bin/inkscape \
-              --add-flags ${systemConfig.${system}.inkscapeBinary} \
-              --set PATH ${lib.makeBinPath [pkgs.coreutils pkgs.bash]}
-          '';
-
-          meta = {
-            description = "Inkscape wrapper with Inkustrator configuration (${systemConfig.${system}.archName})";
-            mainProgram = "inkscape";
-            platforms = [system];
-          };
-        };
-
-      # Create a custom package that combines Inkscape with our wrapper
-      inkustrator = pkgs.symlinkJoin {
-        name = "inkustrator";
-        paths = [
-          inkscape-wrapper
-          pkgs.inkscape
-        ];
-        postBuild = ''
-          if [ -f $out/bin/inkscape-bin ]; then
-            mv $out/bin/inkscape $out/bin/inkscape-original || true
-            cp ${inkscape-wrapper}/bin/inkscape $out/bin/inkscape
-            chmod +x $out/bin/inkscape
-          fi
-        '';
-        meta = {
-          description = "Inkscape with Inkustrator configuration for an Illustrator-like experience (${systemConfig.${system}.archName})";
-          longDescription = ''
-            Inkustrator is a customization for Inkscape that makes it more familiar to Adobe Illustrator users.
-            Features include:
-            - Tool organization mimicking Illustrator
-            - Illustrator-like keyboard shortcuts
-            - Custom workspace layout
-            - Enhanced productivity features
-
-            This version is built for ${systemConfig.${system}.archName} Macs.
-          '';
-          homepage = "https://github.com/lucasgabmoreno/inkustrator";
-          license = pkgs.lib.licenses.gpl3;
-          platforms = [system];
-          mainProgram = "inkscape";
-        };
-      };
-
-      # Create the app bundle
-      createInkustratorApp = pkgs.stdenv.mkDerivation {
-        name = "Inkustrator";
-        version = "1.0";
-
-        buildInputs = [
-          pkgs.makeWrapper
-          pkgs.imagemagick
-          pkgs.libicns
-        ];
-
-        dontUnpack = true;
-
-        installPhase = ''
-          mkdir -p $out/Applications/Inkustrator.app/Contents/{MacOS,Resources}
-
-          # Convert PNG to ICNS
-          ${pkgs.imagemagick}/bin/convert ${inkustratorIcon}/icon.png -resize 512x512 icon.png
-          ${pkgs.libicns}/bin/png2icns $out/Applications/Inkustrator.app/Contents/Resources/appIcon.icns icon.png
-
-          # Create Info.plist with more macOS metadata
-          cat > $out/Applications/Inkustrator.app/Contents/Info.plist << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>CFBundleExecutable</key>
-            <string>Inkustrator</string>
-            <key>CFBundleIconFile</key>
-            <string>appIcon</string>
-            <key>CFBundleIdentifier</key>
-            <string>org.inkscape.Inkustrator</string>
-            <key>CFBundleName</key>
-            <string>Inkustrator</string>
-            <key>CFBundlePackageType</key>
-            <string>APPL</string>
-            <key>CFBundleShortVersionString</key>
-            <string>1.0</string>
-            <key>LSMinimumSystemVersion</key>
-            <string>10.10.0</string>
-            <key>CFBundleVersion</key>
-            <string>1.0</string>
-            <key>LSApplicationCategoryType</key>
-            <string>public.app-category.graphics-design</string>
-            <key>NSHighResolutionCapable</key>
-            <true/>
-            <key>NSRequiresAquaSystemAppearance</key>
-            <true/>
-            <key>LSArchitecturePriority</key>
-            <array>
-              <string>${
-            if system == "aarch64-darwin"
-            then "arm64"
-            else "x86_64"
-          }</string>
-            </array>
-          </dict>
-          </plist>
-          EOF
-
-          # Create launcher script
-          makeWrapper ${inkustrator}/bin/inkscape $out/Applications/Inkustrator.app/Contents/MacOS/Inkustrator \
-            --set PATH "${lib.makeBinPath [pkgs.inkscape]}" \
-            --set XDG_DATA_DIRS "${pkgs.inkscape}/share"
-        '';
-
-        meta = {
-          description = "Inkustrator.app bundle (${systemConfig.${system}.archName})";
-          platforms = [system];
-          homepage = "https://github.com/lucasgabmoreno/inkustrator";
-          license = pkgs.lib.licenses.gpl3;
-        };
-      };
-    in {
-      packages = {
-        inkustrator = inkustrator;
-        inkustratorApp = createInkustratorApp;
-        default = createInkustratorApp;
-      };
-    })
-    // {
-      # Non-system specific outputs
-      nixosModules.default = {
-        config,
-        lib,
-        pkgs,
-        ...
-      }: {
-        options = {
-          programs.inkustrator = {
-            enable = lib.mkEnableOption "Inkustrator";
-          };
-        };
-
-        config = lib.mkIf config.programs.inkustrator.enable {
-          environment.systemPackages = [self.packages.${pkgs.system}.inkustrator];
-          system.build.applications = pkgs.lib.mkForce (pkgs.buildEnv {
-            name = "applications";
-            paths = [self.packages.${pkgs.system}.inkustratorApp];
-            pathsToLink = ["/Applications"];
-          });
-        };
-      };
-
-      darwinModules.default = self.nixosModules.default;
-
-      homeManagerModules.default = {
-        config,
-        lib,
-        pkgs,
-        ...
-      }: {
-        options = {
-          programs.inkustrator = {
-            enable = lib.mkEnableOption "Inkustrator";
-          };
-        };
-
-        config = lib.mkIf config.programs.inkustrator.enable {
-          home.packages = [self.packages.${pkgs.system}.inkustrator];
-          home.activation.installInkustrator = lib.hm.dag.entryAfter ["writeBoundary"] ''
-            echo "Checking Inkustrator.app installation..."
-
-            installApp() {
-              echo "Installing Inkustrator.app..."
-              /usr/bin/osascript -e "do shell script \"rm -rf /Applications/Inkustrator.app\" with administrator privileges"
-              /usr/bin/osascript -e "do shell script \"cp -rf ${self.packages.${pkgs.system}.inkustratorApp}/Applications/Inkustrator.app /Applications/ && chown -R $USER:staff /Applications/Inkustrator.app\" with administrator privileges"
-            }
-
-            if [ ! -e "/Applications/Inkustrator.app" ]; then
-              installApp
-            else
-              # Check if the app bundle is different
-              if ! diff -qr "${self.packages.${pkgs.system}.inkustratorApp}/Applications/Inkustrator.app" "/Applications/Inkustrator.app" &>/dev/null; then
-                echo "Updating Inkustrator.app..."
-                installApp
-              else
-                echo "Inkustrator.app is up to date"
-              fi
+            mkdir -p $out/lib $out/bin
+            
+            # Copy source files
+            cp -r server.js models.js package.json $out/lib/
+            if [ -d "src" ]; then
+              cp -r src $out/lib/
             fi
+            
+            # Create the main wrapper script
+            makeWrapper ${pkgs.nodejs_20}/bin/node $out/bin/mcp-server \
+              --add-flags "$out/lib/server.js" \
+              --set NODE_PATH "$out/lib/node_modules"
+            
+            # Create a wrapper for local-ssl-proxy
+            makeWrapper ${pkgs.nodejs_20}/bin/npx $out/bin/mcp-ssl-proxy \
+              --add-flags "local-ssl-proxy" \
+              --set NODE_PATH "$out/lib/node_modules"
+            
+            # Install dependencies
+            mkdir -p $out/lib/node_modules
+            cd $out/lib
+            export HOME=$TMPDIR
+            ${pkgs.nodejs_20}/bin/npm install --production --no-audit --no-fund
+          '';
+        };
+
+        # Development shell
+        devShell = pkgs.mkShell {
+          buildInputs = [
+            pkgs.nodejs_20
+            pkgs.nodePackages.npm
+            pkgs.nodePackages.nodemon
+          ];
+          
+          shellHook = ''
+            export PATH="$PWD/node_modules/.bin:$PATH"
+            export NODE_ENV="development"
+            
+            # Create sample .env file if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "Creating sample .env file..."
+              cat > .env << EOL
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+PORT=6969
+ALLOWED_ORIGINS=http://localhost:8000,https://app.cursor.sh
+EOL
+            fi
+            
+            echo "MCP Server development environment ready!"
+            echo "Run 'npm start' to start the server"
           '';
         };
       };
+
+      # Common module options between NixOS and Darwin
+      overlays.default = final: prev: {
+        nix-mcp-server = self.packages.${final.system}.default;
+      };
+
+      # NixOS module
+      nixosModules.default = { config, lib, pkgs, ... }:
+        let
+          cfg = config.services.mcp-server;
+          
+          # Generate environment variables
+          environmentVariables = {
+            PORT = toString cfg.port;
+            ALLOWED_ORIGINS = cfg.allowedOrigins;
+            NODE_ENV = "production";
+          } // lib.optionalAttrs (cfg.anthropicApiKey != null) {
+            ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+          } // lib.optionalAttrs (cfg.openaiApiKey != null) {
+            OPENAI_API_KEY = cfg.openaiApiKey;
+          };
+          
+          # Import the SSL proxy service module
+          sslProxyModule = import ./ssl-proxy-service.nix;
+        in lib.recursiveUpdate (sslProxyModule { inherit config lib pkgs; }) {
+          options.services.mcp-server = with lib; {
+            enable = mkEnableOption "MCP server for AI-enabled tools";
+            
+            package = mkOption {
+              type = types.package;
+              default = self.packages.${pkgs.system}.default;
+              description = "The MCP server package to use";
+            };
+            
+            port = mkOption {
+              type = types.port;
+              default = 9696;  # HTTP port
+              description = "Port on which the MCP server will listen";
+            };
+            
+            httpsPort = mkOption {
+              type = types.port;
+              default = 6969;  # HTTPS port
+              description = "Port on which the HTTPS proxy will listen";
+            };
+            
+            enableHttps = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Whether to enable HTTPS via local-ssl-proxy";
+            };
+            
+            httpsPort = mkOption {
+              type = types.port;
+              default = 7070;
+              description = "Port on which the HTTPS proxy will listen";
+            };
+            
+            enableHttps = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Whether to enable HTTPS via local-ssl-proxy";
+            };
+            
+            allowedOrigins = mkOption {
+              type = types.str;
+              default = "http://localhost:8000,https://app.cursor.sh";
+              description = "Comma-separated list of allowed CORS origins";
+            };
+            
+            anthropicApiKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Anthropic API key for Claude models";
+            };
+            
+            openaiApiKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "OpenAI API key";
+            };
+            
+            dataDir = mkOption {
+              type = types.path;
+              default = "/var/lib/mcp-server";
+              description = "Directory to store MCP server data";
+            };
+            
+            user = mkOption {
+              type = types.str;
+              default = "mcp-server";
+              description = "User account under which the MCP server runs";
+            };
+            
+            group = mkOption {
+              type = types.str;
+              default = "mcp-server";
+              description = "Group under which the MCP server runs";
+            };
+          };
+          
+          config = lib.mkIf cfg.enable {
+            users.users.${cfg.user} = {
+              isSystemUser = true;
+              group = cfg.group;
+              description = "MCP server user";
+              home = cfg.dataDir;
+              createHome = true;
+            };
+            
+            users.groups.${cfg.group} = {};
+            
+            systemd.services.mcp-server = {
+              description = "MCP Server for AI-enabled tools";
+              wantedBy = [ "multi-user.target" ];
+              after = [ "network.target" ];
+              
+              serviceConfig = {
+                User = cfg.user;
+                Group = cfg.group;
+                ExecStart = "${cfg.package}/bin/mcp-server";
+                Restart = "on-failure";
+                WorkingDirectory = cfg.dataDir;
+                
+                # Standard logging to journald
+                StandardOutput = "journal";
+                StandardError = "journal";
+                
+                # Hardening
+                NoNewPrivileges = true;
+                ProtectSystem = "strict";
+                ProtectHome = true;
+                PrivateTmp = true;
+              };
+              
+              environment = environmentVariables;
+            };
+          };
+        };
+
+      # Darwin module
+      darwinModules.default = { config, lib, pkgs, ... }:
+        let
+          cfg = config.services.mcp-server;
+          
+          # Generate environment variables
+          environmentVariables = {
+            PORT = toString cfg.port;
+            ALLOWED_ORIGINS = cfg.allowedOrigins;
+            NODE_ENV = "production";
+          } // lib.optionalAttrs (cfg.anthropicApiKey != null) {
+            ANTHROPIC_API_KEY = cfg.anthropicApiKey;
+          } // lib.optionalAttrs (cfg.openaiApiKey != null) {
+            OPENAI_API_KEY = cfg.openaiApiKey;
+          } // lib.optionalAttrs (cfg.enableHttps) {
+            HTTPS_PORT = toString cfg.httpsPort;
+          };
+        in {
+          options.services.mcp-server = with lib; {
+            enable = mkEnableOption "MCP server for AI-enabled tools";
+            
+            package = mkOption {
+              type = types.package;
+              default = self.packages.${pkgs.system}.default;
+              description = "The MCP server package to use";
+            };
+            
+            port = mkOption {
+              type = types.port;
+              default = 6969;  # Less common port to avoid conflicts
+              description = "Port on which the MCP server will listen";
+            };
+            
+            allowedOrigins = mkOption {
+              type = types.str;
+              default = "http://localhost:8000,https://app.cursor.sh";
+              description = "Comma-separated list of allowed CORS origins";
+            };
+            
+            anthropicApiKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Anthropic API key for Claude models";
+            };
+            
+            openaiApiKey = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "OpenAI API key";
+            };
+            
+            dataDir = mkOption {
+              type = types.path;
+              default = "/var/lib/mcp-server";
+              description = "Directory to store MCP server data";
+            };
+            
+            stdoutPath = mkOption {
+              type = types.path;
+              default = "/Library/Logs/mcp-server.log";
+              description = "Path to stdout log file";
+            };
+            
+            stderrPath = mkOption {
+              type = types.path;
+              default = "/Library/Logs/mcp-server.error.log";
+              description = "Path to stderr log file";
+            };
+          };
+          
+          config = lib.mkIf cfg.enable {
+            # Create the service
+            launchd.daemons.mcp-server = {
+              serviceConfig = {
+                Label = "com.user.mcp-server";
+                ProgramArguments = [
+                  "${cfg.package}/bin/mcp-server"
+                ];
+                RunAtLoad = true;
+                KeepAlive = true;
+                WorkingDirectory = cfg.dataDir;
+                StandardOutPath = cfg.stdoutPath;
+                StandardErrorPath = cfg.stderrPath;
+                EnvironmentVariables = environmentVariables;
+              };
+            };
+            
+            # Create necessary directories
+            system.activationScripts.preActivation.text = ''
+              mkdir -p ${cfg.dataDir}
+              mkdir -p ${lib.strings.dirOf cfg.stdoutPath}
+              mkdir -p ${lib.strings.dirOf cfg.stderrPath}
+              touch ${cfg.stdoutPath}
+              touch ${cfg.stderrPath}
+            '';
+          };
+        };
     };
 }
