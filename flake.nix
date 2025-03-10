@@ -126,7 +126,7 @@ EOL
               description = "Port on which the MCP server will listen";
             };
             
-            httpsPort = mkOption {
+            sslPort = mkOption {
               type = types.port;
               default = 6969;  # HTTPS port
               description = "Port on which the HTTPS proxy will listen";
@@ -138,6 +138,11 @@ EOL
               description = "Whether to enable HTTPS via local-ssl-proxy";
             };
             
+            httpsPort = mkOption {
+              type = types.port;
+              default = 7070;
+              description = "Port on which the HTTPS proxy will listen";
+            };
             
             enableHttps = mkOption {
               type = types.bool;
