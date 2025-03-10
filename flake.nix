@@ -7,6 +7,168 @@
   };
 
   outputs = { self, nixpkgs, flake-utils-plus, ... }@inputs:
+    let
+      # Define server.js content directly in the flake
+      serverContent = ''
+        const express = require('express');
+        const cors = require('cors');
+        const Anthropic = require('@anthropic-ai/sdk');
+        require('dotenv').config();
+
+        // Initialize Express app
+        const app = express();
+        const port = process.env.PORT || 6969;
+
+        // Configure CORS
+        const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:8000,https://app.cursor.sh').split(',');
+        app.use(cors({
+          origin: function(origin, callback) {
+            if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+              callback(null, true);
+            } else {
+              callback(new Error('Not allowed by CORS'));
+            }
+          }
+        }));
+
+        // Configure middleware
+        app.use(express.json());
+
+        // Initialize AI clients
+        const anthropic = new Anthropic({
+          apiKey: process.env.ANTHROPIC_API_KEY,
+        });
+
+        // MCP protocol endpoint
+        app.post('/v1/generate', async (req, res) => {
+          try {
+            const { model, messages, max_tokens } = req.body;
+            
+            // Handle different model providers
+            if (model.includes('claude')) {
+              const response = await anthropic.messages.create({
+                model: model,
+                max_tokens: max_tokens || 4000,
+                messages: messages
+              });
+              
+              return res.json({
+                model: model,
+                choices: [{
+                  message: {
+                    content: response.content[0].text,
+                    role: 'assistant'
+                  }
+                }]
+              });
+            } 
+            // Add placeholder for other model providers
+            else {
+              return res.status(400).json({ error: 'Unsupported model' });
+            }
+          } catch (error) {
+            console.error('Error generating response:', error);
+            res.status(500).json({ error: error.message });
+          }
+        });
+
+        // Health check endpoint
+        app.get('/health', (req, res) => {
+          res.json({ status: 'ok' });
+        });
+
+        // Start the server
+        app.listen(port, () => {
+          console.log(`MCP server listening at http://localhost:${port}`);
+          console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+        });
+      '';
+
+      # Define models.js content
+      modelsContent = ''
+        // Available models configuration
+        const availableModels = [
+          {
+            id: 'claude-3-7-sonnet-20250219',
+            provider: 'anthropic',
+            name: 'Claude 3.7 Sonnet',
+            contextWindow: 200000,
+            capabilities: {
+              coding: true,
+              reasoning: true,
+              insertion: true
+            }
+          },
+          {
+            id: 'claude-3-opus-20240229',
+            provider: 'anthropic',
+            name: 'Claude 3 Opus',
+            contextWindow: 200000,
+            capabilities: {
+              coding: true,
+              reasoning: true,
+              insertion: true
+            }
+          }
+        ];
+
+        module.exports = availableModels;
+      '';
+
+      # Define package.json content
+      packageJsonContent = ''
+        {
+          "name": "nix-mcp-server",
+          "version": "1.0.0",
+          "description": "Generic MCP server for AI-enabled tools",
+          "main": "server.js",
+          "scripts": {
+            "start": "node server.js"
+          },
+          "keywords": [
+            "mcp",
+            "ai",
+            "claude",
+            "nix",
+            "llm"
+          ],
+          "dependencies": {
+            "@anthropic-ai/sdk": "^0.17.1",
+            "cors": "^2.8.5",
+            "dotenv": "^16.4.1",
+            "express": "^4.18.2",
+            "local-ssl-proxy": "^2.0.0"
+          }
+        }
+      '';
+
+      # SSL proxy service implementation
+      sslProxyService = { config, lib, pkgs }:
+        let
+          cfg = config.services.mcp-server;
+        in {
+          config = lib.mkIf (cfg.enable && cfg.enableHttps) {
+            systemd.services.mcp-ssl-proxy = {
+              description = "SSL Proxy for MCP Server";
+              after = [ "mcp-server.service" "network.target" ];
+              requires = [ "mcp-server.service" ];
+              wantedBy = [ "multi-user.target" ];
+              
+              serviceConfig = {
+                Type = "simple";
+                User = cfg.user;
+                Group = cfg.group;
+                ExecStart = "${cfg.package}/bin/mcp-ssl-proxy --source ${toString cfg.sslPort} --target ${toString cfg.port}";
+                Restart = "on-failure";
+                
+                # Hardening
+                NoNewPrivileges = true;
+                PrivateTmp = true;
+              };
+            };
+          };
+        };
+    in
     flake-utils-plus.lib.mkFlake {
       inherit self inputs;
 
@@ -24,21 +186,20 @@
         packages.default = pkgs.stdenv.mkDerivation {
           name = "nix-mcp-server";
           version = "1.0.0";
-          src = ./.;
+          
+          # We don't need a src since we're creating the files ourselves
+          dontUnpack = true;
           
           nativeBuildInputs = [ pkgs.makeWrapper ];
           buildInputs = [ pkgs.nodejs_20 ];
           
-          phases = [ "unpackPhase" "installPhase" ];
-          
           installPhase = ''
             mkdir -p $out/lib $out/bin
             
-            # Copy source files
-            cp -r server.js models.js package.json $out/lib/
-            if [ -d "src" ]; then
-              cp -r src $out/lib/
-            fi
+            # Create source files from the content defined in the flake
+            echo ${builtins.toJSON serverContent} > $out/lib/server.js
+            echo ${builtins.toJSON modelsContent} > $out/lib/models.js
+            echo ${builtins.toJSON packageJsonContent} > $out/lib/package.json
             
             # Create the main wrapper script
             makeWrapper ${pkgs.nodejs_20}/bin/node $out/bin/mcp-server \
@@ -76,7 +237,7 @@
               cat > .env << EOL
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
-PORT=6969
+PORT=9696
 ALLOWED_ORIGINS=http://localhost:8000,https://app.cursor.sh
 EOL
             fi
@@ -87,7 +248,7 @@ EOL
         };
       };
 
-      # Common module options between NixOS and Darwin
+      # Default overlay
       overlays.default = final: prev: {
         nix-mcp-server = self.packages.${final.system}.default;
       };
@@ -109,10 +270,7 @@ EOL
           } // lib.optionalAttrs (cfg.enableHttps) {
             HTTPS_PORT = toString cfg.sslPort;
           };
-          
-          # Import the SSL proxy service module
-          sslProxyModule = import ./ssl-proxy-service.nix;
-        in lib.recursiveUpdate (sslProxyModule { inherit config lib pkgs; }) {
+        in lib.recursiveUpdate (sslProxyService { inherit config lib pkgs; }) {
           options.services.mcp-server = with lib; {
             enable = mkEnableOption "MCP server for AI-enabled tools";
             
@@ -124,13 +282,13 @@ EOL
             
             port = mkOption {
               type = types.port;
-              default = 6969;  # HTTP port
+              default = 9696;  # HTTP port
               description = "Port on which the MCP server will listen";
             };
             
-            httpsPort = mkOption {
+            sslPort = mkOption {
               type = types.port;
-              default = 7070;
+              default = 6969;  # HTTPS port
               description = "Port on which the HTTPS proxy will listen";
             };
             
@@ -231,7 +389,7 @@ EOL
           } // lib.optionalAttrs (cfg.openaiApiKey != null) {
             OPENAI_API_KEY = cfg.openaiApiKey;
           } // lib.optionalAttrs (cfg.enableHttps) {
-            HTTPS_PORT = toString cfg.httpsPort;
+            HTTPS_PORT = toString cfg.sslPort;
           };
         in {
           options.services.mcp-server = with lib; {
@@ -245,8 +403,20 @@ EOL
             
             port = mkOption {
               type = types.port;
-              default = 6969;  # Less common port to avoid conflicts
+              default = 9696;  # HTTP port
               description = "Port on which the MCP server will listen";
+            };
+            
+            sslPort = mkOption {
+              type = types.port;
+              default = 6969;  # HTTPS port
+              description = "Port on which the HTTPS proxy will listen";
+            };
+            
+            enableHttps = mkOption {
+              type = types.bool;
+              default = false;
+              description = "Whether to enable HTTPS via local-ssl-proxy";
             };
             
             allowedOrigins = mkOption {
