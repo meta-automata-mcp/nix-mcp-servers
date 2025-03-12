@@ -179,17 +179,16 @@
 
         # Generate the configuration
         makeConfig = {
-          mcpServers = lib.mkMerge ([
-              # Always create an empty mcpServers object
-              {}
-            ]
+          mcpServers = lib.foldl lib.recursiveUpdate {} (
+            [{}]
             ++ lib.mapAttrsToList (
               name: server:
-                lib.mkIf server.enable {
-                  ${name} = serverTypes.${name}.makeConfig server;
-                }
+                if server.enable
+                then {${name} = serverTypes.${name}.makeConfig server;}
+                else {}
             )
-            cfg.servers);
+            cfg.servers
+          );
         };
 
         # Evaluate the configuration
