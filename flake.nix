@@ -245,17 +245,23 @@
           system.activationScripts.mcp-servers = {
             text = ''
               #!${pkgs.bash}/bin/bash
-              echo "Configuring MCP servers"
+              set -x  # Enable debug output
+              echo "Starting MCP servers configuration..."
+              echo "Current user: $USER"
+              echo "Current directory: $PWD"
 
               # Get the user's home directory
               eval HOME=~$USER
+              echo "Home directory: $HOME"
 
               # Function to validate path
               validate_path() {
                 local path="$1"
+                echo "Validating path: $path"
                 # Expand home directory if path starts with ~
                 if [[ "$path" == "~"* ]]; then
                   path="$HOME''${path#\~}"
+                  echo "Expanded path: $path"
                 fi
 
                 # Check if path exists
@@ -270,6 +276,7 @@
                   return 1
                 fi
 
+                echo "Path validation successful: $path"
                 return 0
               }
 
@@ -301,15 +308,20 @@
                 cfg.servers)}
 
               # Create config directories and files for all supported clients
+              echo "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
               ${lib.concatMapStrings (name: ''
                 echo "Setting up config for ${name}..."
+                echo "Creating directory: $HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
                 mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
+                echo "Writing config to: $HOME/${lib.escapeShellArg (configPath name)}"
                 ${pkgs.jq}/bin/jq '.' > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
                 ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
                 EOL
                 echo "Config file created at: $HOME/${lib.escapeShellArg (configPath name)}"
                 ls -la "$HOME/${lib.escapeShellArg (configPath name)}"
               '') (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}
+
+              set +x  # Disable debug output
             '';
             # Ensure this runs after user setup and home directories are available
             deps = ["users" "groups"];
