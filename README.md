@@ -3,7 +3,7 @@
 [![](https://img.shields.io/badge/aloshy.🅰🅸-000000.svg?style=for-the-badge)](https://aloshy.ai)
 [![Powered By Nix](https://img.shields.io/badge/NIX-POWERED-5277C3.svg?style=for-the-badge&logo=nixos)](https://nixos.org)
 [![Platform](https://img.shields.io/badge/MACOS-ONLY-000000.svg?style=for-the-badge&logo=apple)](https://github.com/aloshy-ai/nix-mcp-servers)
-[![Build Status](https://img.shields.io/badge/BUILD-PASSING-success.svg?style=for-the-badge&logo=github)](https://github.com/aloshy-ai/nix-mcp-servers/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/aloshy-ai/nix-mcp-servers/ci.yml?style=for-the-badge&logo=github)](https://github.com/aloshy-ai/nix-mcp-servers/actions)
 [![License](https://img.shields.io/badge/LICENSE-MIT-blue.svg?style=for-the-badge)](./LICENSE)
 
 A Nix flake for configuring Model Context Protocol (MCP) servers across supported AI assistant clients on macOS.
