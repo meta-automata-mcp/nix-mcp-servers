@@ -175,8 +175,8 @@
             ]
             ++ lib.mapAttrsToList (
               name: serverType:
-                lib.mkIf (builtins.hasAttr name cfg.servers && cfg.servers.${name}.enable) {
-                  ${name} = serverType.makeConfig (validateServer name cfg.servers.${name});
+                lib.mkIf (builtins.hasAttr name cfg && cfg.${name}.enable) {
+                  ${name} = serverType.makeConfig (validateServer name cfg.${name});
                 }
             )
             serverTypes);
