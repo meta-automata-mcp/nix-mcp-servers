@@ -191,6 +191,9 @@
             )
             cfg.servers);
         };
+
+        # Evaluate the configuration
+        evaluatedConfig = lib.recursiveUpdate {} makeConfig;
       in {
         options.mcp-servers = lib.mkOption {
           type = with lib.types;
@@ -331,7 +334,7 @@
               mkdir -p "$configDir"
               echo "Writing config to: $configFile"
               cat > "$configFile" << 'EOL'
-              ${builtins.toJSON makeConfig}
+              ${builtins.toJSON evaluatedConfig}
               EOL
               echo "Config file created at: $configFile"
               ls -la "$configFile"
