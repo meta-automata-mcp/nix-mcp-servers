@@ -184,31 +184,37 @@
       in {
         options.mcp-servers = lib.mkOption {
           type = with lib.types;
-            attrsOf (submodule ({name, ...}: {
+            submodule {
               options = {
-                enable = lib.mkEnableOption "MCP server ${name}";
-                access-token = lib.mkOption {
-                  type = str;
-                  description = "Access token for the ${name} MCP server";
-                  example = "xxxxxxxxxxxxxxxxxxxx";
-                  default = "";
-                };
-                api-url = lib.mkOption {
-                  type = str;
-                  description = "API URL for the ${name} MCP server (if applicable)";
-                  example = "https://gitlab.com/api/v4";
-                  default = "";
-                };
-                allowed-paths = lib.mkOption {
-                  type = listOf str;
-                  description = "List of filesystem paths to allow access to";
-                  example = ["/Users/username/Desktop" "/path/to/other/allowed/dir"];
-                  default = [];
+                servers = mkOption {
+                  type = attrsOf (submodule ({name, ...}: {
+                    options = {
+                      enable = lib.mkEnableOption "MCP server ${name}";
+                      access-token = lib.mkOption {
+                        type = str;
+                        description = "Access token for the ${name} MCP server";
+                        example = "xxxxxxxxxxxxxxxxxxxx";
+                        default = "";
+                      };
+                      api-url = lib.mkOption {
+                        type = str;
+                        description = "API URL for the ${name} MCP server (if applicable)";
+                        example = "https://gitlab.com/api/v4";
+                        default = "";
+                      };
+                      allowed-paths = lib.mkOption {
+                        type = listOf str;
+                        description = "List of filesystem paths to allow access to";
+                        example = ["/Users/username/Desktop" "/path/to/other/allowed/dir"];
+                        default = [];
+                      };
+                    };
+                  }));
+                  default = {};
+                  description = "Configuration for MCP servers";
                 };
               };
-            }));
-          default = {};
-          description = "Configuration for MCP servers";
+            };
         };
 
         config = {
@@ -227,26 +233,7 @@
                   then serverTypes.${name}.validateConfig server
                   else []
               )
-              cfg);
-
-          # Create LaunchAgent to manage config files
-          launchd.agents.mcp-config = {
-            serviceConfig = {
-              Label = "com.mcp.config";
-              ProgramArguments = [
-                "${pkgs.bash}/bin/bash"
-                "-c"
-                (lib.concatStringsSep "\n" (lib.mapAttrsToList (name: client: ''
-                    mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
-                    cat > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
-                    ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
-                    EOL
-                  '')
-                  supportedClients))
-              ];
-              RunAtLoad = true;
-            };
-          };
+              cfg.servers);
 
           system.activationScripts.mcp-servers.text = ''
             #!${pkgs.bash}/bin/bash
@@ -300,9 +287,9 @@
                   ${validatePaths}
                 ''
               )
-              cfg)}
+              cfg.servers)}
 
-            # Create config files
+            # Create config directories and files
             ${lib.concatMapStrings (name: ''
               mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
               ${pkgs.jq}/bin/jq '.' > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
