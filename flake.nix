@@ -229,6 +229,25 @@
               )
               cfg);
 
+          # Create LaunchAgent to manage config files
+          launchd.agents.mcp-config = {
+            serviceConfig = {
+              Label = "com.mcp.config";
+              ProgramArguments = [
+                "${pkgs.bash}/bin/bash"
+                "-c"
+                (lib.concatStringsSep "\n" (lib.mapAttrsToList (name: client: ''
+                    mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
+                    cat > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
+                    ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
+                    EOL
+                  '')
+                  supportedClients))
+              ];
+              RunAtLoad = true;
+            };
+          };
+
           system.activationScripts.mcp-servers.text = ''
             #!${pkgs.bash}/bin/bash
 
@@ -282,16 +301,15 @@
                 ''
               )
               cfg)}
-          '';
 
-          # Always create config files for all supported clients
-          home.file = lib.mkMerge (lib.mapAttrsToList (name: client: {
-              "${configPath name}".source =
-                jsonFormat.generate
-                "mcp-${name}-config"
-                makeConfig;
-            })
-            supportedClients);
+            # Create config files
+            ${lib.concatMapStrings (name: ''
+              mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
+              ${pkgs.jq}/bin/jq '.' > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
+              ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
+              EOL
+            '') (builtins.attrNames supportedClients)}
+          '';
         };
       };
     };
