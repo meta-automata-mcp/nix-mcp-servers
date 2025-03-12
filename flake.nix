@@ -184,12 +184,12 @@
               {}
             ]
             ++ lib.mapAttrsToList (
-              name: serverType:
-                lib.mkIf (builtins.hasAttr name cfg.servers && cfg.servers.${name}.enable) {
-                  ${name} = serverType.makeConfig (validateServer name cfg.servers.${name});
+              name: server:
+                lib.mkIf server.enable {
+                  ${name} = serverTypes.${name}.makeConfig server;
                 }
             )
-            serverTypes);
+            cfg.servers);
         };
       in {
         options.mcp-servers = lib.mkOption {
