@@ -46,15 +46,19 @@
             else path;
 
           # Normalize path by removing trailing slashes and duplicate slashes
-          normalizePath = path: let
-            # First remove trailing slash
-            noTrailing = lib.removeSuffix "/" path;
-            # Then replace multiple slashes with single slash iteratively
-            noMultiple = builtins.replaceStrings ["//" "/"] ["/" "/"] noTrailing;
+          normalizePath = let
+            # Helper function to recursively normalize paths
+            go = path: let
+              # First remove trailing slash
+              noTrailing = lib.removeSuffix "/" path;
+              # Then replace multiple slashes with single slash
+              noMultiple = builtins.replaceStrings ["//" "/"] ["/" "/"] noTrailing;
+            in
+              if builtins.match ".*//" noMultiple != null
+              then go noMultiple
+              else noMultiple;
           in
-            if builtins.match ".*//" noMultiple != null
-            then normalizePath noMultiple
-            else noMultiple;
+            go;
 
           # Validate a single path
           validatePath = path: {
