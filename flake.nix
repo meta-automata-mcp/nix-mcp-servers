@@ -121,13 +121,13 @@
             name = "claude-desktop";
             configDir = "Library/Application Support/Claude";
             configFile = "claude_desktop_config.json";
-            validatePlatform = system: system == "darwin";
+            validatePlatform = system: lib.hasPrefix "aarch64-darwin" system || lib.hasPrefix "x86_64-darwin" system;
           };
           "cursor" = {
             name = "cursor";
             configDir = ".cursor";
             configFile = "mcp.json";
-            validatePlatform = system: system == "darwin";
+            validatePlatform = system: lib.hasPrefix "aarch64-darwin" system || lib.hasPrefix "x86_64-darwin" system;
           };
         };
 
