@@ -1,11 +1,11 @@
 {
-  description = "A flake providing Darwin modules for MCP servers";
+  description = "A flake providing Home Manager modules for MCP servers";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    darwin = {
-      url = "github:lnl7/nix-darwin";
+    home-manager = {
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -14,7 +14,7 @@
     self,
     nixpkgs,
     flake-utils,
-    darwin,
+    home-manager,
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
@@ -26,16 +26,14 @@
       }
     )
     // {
-      # Darwin module that can be added to darwinConfigurations
-      darwinModules.default = {
+      # Home Manager module that can be added to homeConfigurations
+      homeManagerModules.default = {
         config,
         lib,
         pkgs,
         ...
       }: let
-        cfg = config.mcp-servers;
-
-        jsonFormat = pkgs.formats.json {};
+        cfg = config.services.mcp-servers;
 
         # Path validation and normalization utilities
         pathUtils = {
@@ -190,11 +188,8 @@
             cfg.servers
           );
         };
-
-        # Evaluate the configuration
-        evaluatedConfig = lib.recursiveUpdate {} makeConfig;
       in {
-        options.mcp-servers = lib.mkOption {
+        options.services.mcp-servers = lib.mkOption {
           type = with lib.types;
             submodule {
               options = with lib.types; {
@@ -254,91 +249,15 @@
               )
               cfg.servers);
 
-          # Debug output during evaluation
-          warnings = [
-            "MCP Servers module is being evaluated"
-            "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
-            "Enabled servers: ${toString (lib.filter (name: cfg.servers.${name}.enable) (builtins.attrNames cfg.servers))}"
-          ];
-
-          system.activationScripts.postUserActivation.text = lib.mkAfter ''
-            echo "Starting MCP servers configuration..."
-            echo "Current user: $USER"
-            echo "Current directory: $PWD"
-
-            # Get the user's home directory
-            eval HOME=~"$USER"
-            echo "Home directory: $HOME"
-
-            # Function to validate path
-            validate_path() {
-              local path="$1"
-              echo "Validating path: $path"
-              # Expand home directory if path starts with ~
-              if [[ "$path" == "~"* ]]; then
-                path="$HOME''${path#\~}"
-                echo "Expanded path: $path"
-              fi
-
-              # Check if path exists
-              if [[ ! -e "$path" ]]; then
-                echo "Error: Path does not exist: $path"
-                return 1
-              fi
-
-              # Check if we have read access
-              if [[ ! -r "$path" ]]; then
-                echo "Error: No read permission for path: $path"
-                return 1
-              fi
-
-              echo "Path validation successful: $path"
-              return 0
-            }
-
-            ${lib.concatStringsSep "\n" (lib.mapAttrsToList (
-                name: server: let
-                  validatePaths =
-                    if name == "filesystem" && server.enable
-                    then ''
-                      echo "Validating paths for filesystem server..."
-                      ${lib.concatMapStrings (path: ''
-                          if ! validate_path "${pathUtils.expandHome path}"; then
-                            echo "Path validation failed for filesystem server"
-                            exit 1
-                          fi
-                        '')
-                        server.allowed-paths}
-                      echo "All paths validated successfully"
-                    ''
-                    else "";
-                in ''
-                  echo '${name} MCP server is ${
-                    if server.enable
-                    then "enabled"
-                    else "disabled"
-                  }'
-                  ${validatePaths}
-                ''
-              )
-              cfg.servers)}
-
-            # Create config directories and files for all supported clients
-            echo "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
-            ${lib.concatMapStrings (name: ''
-              echo "Setting up config for ${name}..."
-              configDir="$HOME/${clientTypes.${name}.configDir}"
-              configFile="$HOME/${configPath name}"
-              echo "Creating directory: $configDir"
-              mkdir -p "$configDir"
-              echo "Writing config to: $configFile"
-              cat > "$configFile" << 'EOL'
-              ${builtins.toJSON makeConfig}
-              EOL
-              echo "Config file created at: $configFile"
-              ls -la "$configFile"
-            '') (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}
-          '';
+          # Create config files for all supported clients
+          home.file = lib.mkMerge (
+            lib.mapAttrsToList (
+              name: client: {
+                "${configPath name}".text = builtins.toJSON makeConfig;
+              }
+            )
+            supportedClients
+          );
         };
       };
     };
