@@ -330,8 +330,8 @@
               echo "Creating directory: $configDir"
               mkdir -p "$configDir"
               echo "Writing config to: $configFile"
-              ${pkgs.jq}/bin/jq '.' > "$configFile" << 'EOL'
-              ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
+              cat > "$configFile" << 'EOL'
+              ${builtins.toJSON makeConfig}
               EOL
               echo "Config file created at: $configFile"
               ls -la "$configFile"
