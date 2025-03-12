@@ -175,8 +175,8 @@
             ]
             ++ lib.mapAttrsToList (
               name: serverType:
-                lib.mkIf (builtins.hasAttr name cfg && cfg.${name}.enable) {
-                  ${name} = serverType.makeConfig (validateServer name cfg.${name});
+                lib.mkIf (builtins.hasAttr name cfg.servers && cfg.servers.${name}.enable) {
+                  ${name} = serverType.makeConfig (validateServer name cfg.servers.${name});
                 }
             )
             serverTypes);
@@ -186,6 +186,12 @@
           type = with lib.types;
             submodule {
               options = with lib.types; {
+                # For backward compatibility
+                clients = lib.mkOption {
+                  type = listOf str;
+                  description = "List of MCP clients to configure (deprecated, clients are now auto-detected)";
+                  default = [];
+                };
                 servers = lib.mkOption {
                   type = attrsOf (submodule ({name, ...}: {
                     options = with lib.types; {
@@ -215,6 +221,7 @@
                 };
               };
             };
+          description = "Configuration for MCP servers and clients";
         };
 
         config = {
@@ -223,7 +230,7 @@
               {
                 assertion =
                   builtins.all (client: clientTypes ? ${client} && clientTypes.${client}.validatePlatform pkgs.stdenv.hostPlatform.system)
-                  (builtins.attrNames supportedClients);
+                  (lib.unique (cfg.clients ++ builtins.attrNames supportedClients));
                 message = "One or more configured clients are not supported on the current platform";
               }
             ]
@@ -289,13 +296,13 @@
               )
               cfg.servers)}
 
-            # Create config directories and files
+            # Create config directories and files for all supported clients
             ${lib.concatMapStrings (name: ''
               mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
               ${pkgs.jq}/bin/jq '.' > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
               ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
               EOL
-            '') (builtins.attrNames supportedClients)}
+            '') (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}
           '';
         };
       };
