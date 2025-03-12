@@ -113,36 +113,42 @@
                 ++ (map (p: pathUtils.normalizePath (pathUtils.expandHome p)) config.allowed-paths);
             };
           };
-          # Add new server types here following the same pattern
         };
 
-        # Platform-specific config paths
-        configDir = client:
-          if !pkgs.stdenv.hostPlatform.isDarwin
-          then throw "Only Darwin is supported"
-          else
-            lib.nameValuePair client (
-              if client == "claude-desktop"
-              then "Library/Application Support/Claude"
-              else if client == "cursor"
-              then ".cursor"
-              else throw "Unsupported client: ${client}"
-            );
+        # Client type definitions
+        clientTypes = {
+          "claude-desktop" = {
+            name = "claude-desktop";
+            configDir = "Library/Application Support/Claude";
+            configFile = "claude_desktop_config.json";
+            validatePlatform = system: system == "darwin";
+          };
+          "cursor" = {
+            name = "cursor";
+            configDir = ".cursor";
+            configFile = "mcp.json";
+            validatePlatform = system: system == "darwin";
+          };
+        };
 
-        configFile = client:
-          lib.nameValuePair client (
-            if client == "claude-desktop"
-            then "claude_desktop_config.json"
-            else if client == "cursor"
-            then "mcp.json"
-            else throw "Unsupported client: ${client}"
-          );
+        # Get supported clients based on platform
+        supportedClients =
+          lib.filterAttrs
+          (name: client: client.validatePlatform pkgs.stdenv.hostPlatform.system)
+          clientTypes;
 
-        # Full path to config file
-        configPath = client: "${configDir client}/${configFile client}";
+        # Get config path for a client
+        configPath = client: let
+          clientType = clientTypes.${client} or (throw "Unsupported client: ${client}");
+        in "${clientType.configDir}/${clientType.configFile}";
 
-        # List of all supported clients
-        supportedClients = ["claude-desktop" "cursor"];
+        # Validate client configuration
+        validateClient = client:
+          if ! clientTypes ? ${client}
+          then throw "Unsupported client: ${client}"
+          else if ! clientTypes.${client}.validatePlatform pkgs.stdenv.hostPlatform.system
+          then throw "Client ${client} is not supported on ${pkgs.stdenv.hostPlatform.system}"
+          else true;
 
         # Validate server configuration
         validateServer = serverType: serverConfig: let
@@ -187,12 +193,6 @@
                   example = "xxxxxxxxxxxxxxxxxxxx";
                   default = "";
                 };
-                instance-url = lib.mkOption {
-                  type = str;
-                  description = "Instance URL for the ${name} MCP server (if applicable)";
-                  example = "https://gitlab.company.com";
-                  default = "";
-                };
                 api-url = lib.mkOption {
                   type = str;
                   description = "API URL for the ${name} MCP server (if applicable)";
@@ -216,9 +216,9 @@
             [
               {
                 assertion =
-                  builtins.all (client: builtins.elem client supportedClients)
-                  (builtins.attrNames cfg);
-                message = "One or more configured MCP servers are not supported";
+                  builtins.all (client: clientTypes ? ${client} && clientTypes.${client}.validatePlatform pkgs.stdenv.hostPlatform.system)
+                  (builtins.attrNames supportedClients);
+                message = "One or more configured clients are not supported on the current platform";
               }
             ]
             ++ lib.flatten (lib.mapAttrsToList (
@@ -285,10 +285,10 @@
           '';
 
           # Always create config files for all supported clients
-          home.file = lib.mkMerge (map (client: {
-              "${configPath client}".source =
+          home.file = lib.mkMerge (lib.mapAttrsToList (name: client: {
+              "${configPath name}".source =
                 jsonFormat.generate
-                "mcp-${client}-config"
+                "mcp-${name}-config"
                 makeConfig;
             })
             supportedClients);
