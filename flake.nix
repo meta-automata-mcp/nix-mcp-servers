@@ -259,90 +259,82 @@
             "Enabled servers: ${toString (lib.filter (name: cfg.servers.${name}.enable) (builtins.attrNames cfg.servers))}"
           ];
 
-          system.activationScripts.mcp-servers = {
-            text = ''
-              #!${pkgs.bash}/bin/bash
-              set -x  # Enable debug output
-              echo "Starting MCP servers configuration..."
-              echo "Current user: $USER"
-              echo "Current directory: $PWD"
+          system.activationScripts.postUserActivation.text = lib.mkAfter ''
+            echo "Starting MCP servers configuration..."
+            echo "Current user: $USER"
+            echo "Current directory: $PWD"
 
-              # Get the user's home directory
-              eval HOME=~$USER
-              echo "Home directory: $HOME"
+            # Get the user's home directory
+            eval HOME=~$USER
+            echo "Home directory: $HOME"
 
-              # Function to validate path
-              validate_path() {
-                local path="$1"
-                echo "Validating path: $path"
-                # Expand home directory if path starts with ~
-                if [[ "$path" == "~"* ]]; then
-                  path="$HOME''${path#\~}"
-                  echo "Expanded path: $path"
-                fi
+            # Function to validate path
+            validate_path() {
+              local path="$1"
+              echo "Validating path: $path"
+              # Expand home directory if path starts with ~
+              if [[ "$path" == "~"* ]]; then
+                path="$HOME''${path#\~}"
+                echo "Expanded path: $path"
+              fi
 
-                # Check if path exists
-                if [[ ! -e "$path" ]]; then
-                  echo "Error: Path does not exist: $path"
-                  return 1
-                fi
+              # Check if path exists
+              if [[ ! -e "$path" ]]; then
+                echo "Error: Path does not exist: $path"
+                return 1
+              fi
 
-                # Check if we have read access
-                if [[ ! -r "$path" ]]; then
-                  echo "Error: No read permission for path: $path"
-                  return 1
-                fi
+              # Check if we have read access
+              if [[ ! -r "$path" ]]; then
+                echo "Error: No read permission for path: $path"
+                return 1
+              fi
 
-                echo "Path validation successful: $path"
-                return 0
-              }
+              echo "Path validation successful: $path"
+              return 0
+            }
 
-              ${lib.concatStringsSep "\n" (lib.mapAttrsToList (
-                  name: server: let
-                    validatePaths =
-                      if name == "filesystem" && server.enable
-                      then ''
-                        echo "Validating paths for filesystem server..."
-                        ${lib.concatMapStrings (path: ''
-                            if ! validate_path "${pathUtils.expandHome path}"; then
-                              echo "Path validation failed for filesystem server"
-                              exit 1
-                            fi
-                          '')
-                          server.allowed-paths}
-                        echo "All paths validated successfully"
-                      ''
-                      else "";
-                  in ''
-                    echo '${name} MCP server is ${
-                      if server.enable
-                      then "enabled"
-                      else "disabled"
-                    }'
-                    ${validatePaths}
-                  ''
-                )
-                cfg.servers)}
+            ${lib.concatStringsSep "\n" (lib.mapAttrsToList (
+                name: server: let
+                  validatePaths =
+                    if name == "filesystem" && server.enable
+                    then ''
+                      echo "Validating paths for filesystem server..."
+                      ${lib.concatMapStrings (path: ''
+                          if ! validate_path "${pathUtils.expandHome path}"; then
+                            echo "Path validation failed for filesystem server"
+                            exit 1
+                          fi
+                        '')
+                        server.allowed-paths}
+                      echo "All paths validated successfully"
+                    ''
+                    else "";
+                in ''
+                  echo '${name} MCP server is ${
+                    if server.enable
+                    then "enabled"
+                    else "disabled"
+                  }'
+                  ${validatePaths}
+                ''
+              )
+              cfg.servers)}
 
-              # Create config directories and files for all supported clients
-              echo "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
-              ${lib.concatMapStrings (name: ''
-                echo "Setting up config for ${name}..."
-                echo "Creating directory: $HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
-                mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
-                echo "Writing config to: $HOME/${lib.escapeShellArg (configPath name)}"
-                ${pkgs.jq}/bin/jq '.' > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
-                ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
-                EOL
-                echo "Config file created at: $HOME/${lib.escapeShellArg (configPath name)}"
-                ls -la "$HOME/${lib.escapeShellArg (configPath name)}"
-              '') (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}
-
-              set +x  # Disable debug output
-            '';
-            # Ensure this runs after user setup and home directories are available
-            deps = ["users" "groups"];
-          };
+            # Create config directories and files for all supported clients
+            echo "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
+            ${lib.concatMapStrings (name: ''
+              echo "Setting up config for ${name}..."
+              echo "Creating directory: $HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
+              mkdir -p "$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
+              echo "Writing config to: $HOME/${lib.escapeShellArg (configPath name)}"
+              ${pkgs.jq}/bin/jq '.' > "$HOME/${lib.escapeShellArg (configPath name)}" << 'EOL'
+              ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
+              EOL
+              echo "Config file created at: $HOME/${lib.escapeShellArg (configPath name)}"
+              ls -la "$HOME/${lib.escapeShellArg (configPath name)}"
+            '') (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}
+          '';
         };
       };
     };
