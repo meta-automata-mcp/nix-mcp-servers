@@ -40,10 +40,10 @@
 
         # Path validation and normalization utilities
         pathUtils = {
-          # Expand ~ to $HOME
+          # Expand ~ to $HOME - Replace with actual home path at generation time
           expandHome = path:
             if lib.hasPrefix "~" path
-            then "\${HOME}${lib.removePrefix "~" path}"
+            then builtins.replaceStrings ["~"] [config.home.homeDirectory] path
             else path;
 
           # Normalize path by removing trailing slashes and duplicate slashes
