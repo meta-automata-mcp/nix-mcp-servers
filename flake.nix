@@ -265,7 +265,7 @@
             echo "Current directory: $PWD"
 
             # Get the user's home directory
-            eval HOME=~$USER
+            eval HOME=~"$USER"
             echo "Home directory: $HOME"
 
             # Function to validate path
