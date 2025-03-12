@@ -242,6 +242,13 @@
               )
               cfg.servers);
 
+          # Debug output during evaluation
+          warnings = [
+            "MCP Servers module is being evaluated"
+            "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
+            "Enabled servers: ${toString (lib.filter (name: cfg.servers.${name}.enable) (builtins.attrNames cfg.servers))}"
+          ];
+
           system.activationScripts.mcp-servers = {
             text = ''
               #!${pkgs.bash}/bin/bash
