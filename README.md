@@ -1,20 +1,19 @@
-# nix-inkustrator
+# nix-mcp-servers
 
 [![](https://img.shields.io/badge/aloshy.🅰🅸-000000.svg?style=for-the-badge)](https://aloshy.ai)
 [![Powered By Nix](https://img.shields.io/badge/NIX-POWERED-5277C3.svg?style=for-the-badge&logo=nixos)](https://nixos.org)
-[![Platform](https://img.shields.io/badge/MACOS-ONLY-000000.svg?style=for-the-badge&logo=apple)](https://github.com/aloshy-ai/nix-inkustrator)
-[![Build Status](https://img.shields.io/badge/BUILD-PASSING-success.svg?style=for-the-badge&logo=github)](https://github.com/aloshy-ai/nix-inkustrator/actions)
-[![License](https://img.shields.io/badge/LICENSE-GPL3-yellow.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+[![Platform](https://img.shields.io/badge/MACOS-ONLY-000000.svg?style=for-the-badge&logo=apple)](https://github.com/aloshy-ai/nix-mcp-servers)
+[![Build Status](https://img.shields.io/badge/BUILD-PASSING-success.svg?style=for-the-badge&logo=github)](https://github.com/aloshy-ai/nix-mcp-servers/actions)
+[![License](https://img.shields.io/badge/LICENSE-MIT-blue.svg?style=for-the-badge)](./LICENSE)
 
-A Nix package that provides Inkustrator customizations for Inkscape on macOS, making it more familiar to Adobe Illustrator users.
+A Nix flake for configuring Model Context Protocol (MCP) servers across supported AI assistant clients on macOS.
 
 ## Features
 
-- Installs and configures Inkscape with Inkustrator customizations
-- Provides an Illustrator-like interface and keyboard shortcuts
-- Creates a proper macOS application bundle
-- Supports both Apple Silicon and Intel Macs
-- Integrates with Nix, NixOS, and nix-darwin
+- Configures MCP servers for multiple AI assistant clients
+- Currently supports Claude Desktop and Cursor
+- Implements GitHub MCP server integration
+- Easy configuration through nix-darwin
 
 ## Installation
 
@@ -25,15 +24,21 @@ Add the following to your `flake.nix`:
 ```nix
 {
   inputs = {
-    nix-inkustrator.url = "github:aloshy-ai/nix-inkustrator";
+    nix-mcp-servers.url = "github:aloshy-ai/nix-mcp-servers";
   };
 
-  outputs = { self, darwin, nix-inkustrator, ... }: {
+  outputs = { self, darwin, nix-mcp-servers, ... }: {
     darwinConfigurations."your-hostname" = darwin.lib.darwinSystem {
       modules = [
-        nix-inkustrator.darwinModules.default
+        nix-mcp-servers.darwinModules.default
         {
-          programs.inkustrator.enable = true;
+          mcp-servers = {
+            clients = [ "claude-desktop" "cursor" ];
+            github = {
+              enable = true;
+              access-token = "your-github-token";
+            };
+          };
         }
       ];
     };
@@ -41,51 +46,19 @@ Add the following to your `flake.nix`:
 }
 ```
 
-### Using Home Manager
+## Configuration Options
 
-Add the following to your Home Manager configuration:
+| Option | Description | Type | Default |
+|--------|-------------|------|---------|
+| `mcp-servers.clients` | List of MCP clients to configure | List of `"claude-desktop"` or `"cursor"` | `[]` |
+| `mcp-servers.github.enable` | Enable GitHub MCP server | Boolean | `false` |
+| `mcp-servers.github.access-token` | GitHub personal access token | String | Required if GitHub enabled |
 
-```nix
-{
-  inputs = {
-    nix-inkustrator.url = "github:aloshy-ai/nix-inkustrator";
-  };
+## Supported Clients
 
-  outputs = { self, home-manager, nix-inkustrator, ... }: {
-    homeConfigurations."your-username" = home-manager.lib.homeManagerConfiguration {
-      modules = [
-        nix-inkustrator.homeManagerModules.default
-        {
-          programs.inkustrator.enable = true;
-        }
-      ];
-    };
-  };
-}
-```
-
-### Direct Installation
-
-You can also install it directly using:
-
-```bash
-nix profile install github:aloshy-ai/nix-inkustrator
-```
-
-## Usage
-
-After installation:
-
-1. Launch Inkustrator from your Applications folder
-2. The interface will be customized to match Adobe Illustrator's layout
-3. Keyboard shortcuts will match Illustrator's defaults
-4. Your settings will be preserved between updates
-
-## Credits
-
-- Original Inkustrator project by [Lucas Gabriel Moreno](https://github.com/lucasgabmoreno/inkustrator)
-- Nix packaging by [aloshy-ai](https://github.com/aloshy-ai)
+- **Claude Desktop**: Configures `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Cursor**: Configures `~/.cursor/mcp.json`
 
 ## License
 
-This project is licensed under the GPL-3.0 License - see the original [Inkustrator repository](https://github.com/lucasgabmoreno/inkustrator) for details. 
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
