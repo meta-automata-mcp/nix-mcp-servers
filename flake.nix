@@ -325,16 +325,16 @@
             echo "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
             ${lib.concatMapStrings (name: ''
               echo "Setting up config for ${name}..."
-              configDir="$HOME/${lib.escapeShellArg (clientTypes.${name}.configDir)}"
-              configFile="$HOME/${lib.escapeShellArg (configPath name)}"
+              configDir=$(printf "%q" "$HOME/${clientTypes.${name}.configDir}")
+              configFile=$(printf "%q" "$HOME/${configPath name}")
               echo "Creating directory: $configDir"
-              mkdir -p "$configDir"
+              mkdir -p $configDir
               echo "Writing config to: $configFile"
-              ${pkgs.jq}/bin/jq '.' > "$configFile" << 'EOL'
+              ${pkgs.jq}/bin/jq '.' > $configFile << 'EOL'
               ${builtins.toJSON (jsonFormat.generate "mcp-${name}-config" makeConfig)}
               EOL
               echo "Config file created at: $configFile"
-              ls -la "$configFile"
+              ls -la $configFile
             '') (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}
           '';
         };
