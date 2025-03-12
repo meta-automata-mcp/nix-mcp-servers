@@ -185,10 +185,10 @@
         options.mcp-servers = lib.mkOption {
           type = with lib.types;
             submodule {
-              options = {
-                servers = mkOption {
+              options = with lib.types; {
+                servers = lib.mkOption {
                   type = attrsOf (submodule ({name, ...}: {
-                    options = {
+                    options = with lib.types; {
                       enable = lib.mkEnableOption "MCP server ${name}";
                       access-token = lib.mkOption {
                         type = str;
