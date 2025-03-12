@@ -327,13 +327,13 @@
             echo "Supported clients: ${toString (lib.unique (cfg.clients ++ builtins.attrNames supportedClients))}"
             ${lib.concatMapStrings (name: ''
               echo "Setting up config for ${name}..."
-              configDir=$(printf "%q" "$HOME/${clientTypes.${name}.configDir}")
-              configFile=$(printf "%q" "$HOME/${configPath name}")
+              configDir="$HOME/${clientTypes.${name}.configDir}"
+              configFile="$HOME/${configPath name}"
               echo "Creating directory: $configDir"
               mkdir -p "$configDir"
               echo "Writing config to: $configFile"
               cat > "$configFile" << 'EOL'
-              ${builtins.toJSON evaluatedConfig}
+              ${builtins.toJSON makeConfig}
               EOL
               echo "Config file created at: $configFile"
               ls -la "$configFile"
