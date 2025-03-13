@@ -23,7 +23,7 @@ This document provides solutions for common issues you might encounter when usin
 
 3. For home-manager users, verify that the module was properly imported:
    ```nix
-   imports = [ 
+   imports = [
      (builtins.fetchTarball "https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz").homeManagerModules.default
    ];
    ```
@@ -55,7 +55,7 @@ services.mcp-clients.servers.local_models = {
    ```bash
    # macOS
    cat ~/Library/Application\ Support/Claude/mcp-config.json
-   
+
    # Linux
    cat ~/.config/claude-desktop/mcp-config.json
    ```
@@ -90,4 +90,4 @@ If you're still experiencing issues after trying these solutions, please:
 
 1. Open an issue on the [GitHub repository](https://github.com/aloshy-ai/nix-mcp-servers/issues)
 2. Include your configuration and any error messages
-3. Describe the steps you've already taken to troubleshoot the problem 
+3. Describe the steps you've already taken to troubleshoot the problem

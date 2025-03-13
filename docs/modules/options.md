@@ -31,4 +31,4 @@ This document provides a reference for all the available options in the MCP serv
 
 ---
 
-*Note: This documentation is automatically generated from the module options declarations. For the most up-to-date information, you can run `nix run github:aloshy-ai/nix-mcp-servers#view-docs`.* 
+*Note: This documentation is automatically generated from the module options declarations. For the most up-to-date information, you can run `nix run github:aloshy-ai/nix-mcp-servers#view-docs`.*

@@ -20,4 +20,4 @@ If you encounter issues, please refer to the [troubleshooting guide](./troublesh
 
 ## Configuration Guide
 
-For detailed configuration instructions, please refer to the main [README.md](../README.md). 
+For detailed configuration instructions, please refer to the main [README.md](../README.md).

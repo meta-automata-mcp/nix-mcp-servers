@@ -23,7 +23,7 @@ The `filesystem` server type allows Claude Desktop to load and use AI models sto
 # In your configuration.nix, home.nix, or darwin-configuration.nix:
 services.mcp-clients = {
   enable = true;
-  
+
   servers.local_models = {
     enable = true;
     name = "Local Models";
@@ -31,7 +31,7 @@ services.mcp-clients = {
     path = "/Users/username/Documents/AI/models";
     credentials.apiKey = "not-needed";
   };
-  
+
   clients.claude = {
     enable = true;
     clientType = "claude_desktop";
@@ -48,4 +48,4 @@ Compatible with Claude Desktop client only.
 
 - Ensure your model files are in a compatible format for Claude Desktop
 - The client must have read permissions for the specified path
-- For security, avoid placing sensitive files in the models directory 
+- For security, avoid placing sensitive files in the models directory

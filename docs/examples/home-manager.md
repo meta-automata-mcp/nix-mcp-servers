@@ -11,7 +11,7 @@ This example demonstrates how to use the MCP servers module with Home Manager.
     home-manager.url = "github:nix-community/home-manager";
     mcp-servers.url = "github:aloshy-ai/nix-mcp-servers";
   };
-  
+
   outputs = { self, nixpkgs, home-manager, mcp-servers, ... }: {
     homeConfigurations.username = home-manager.lib.homeManagerConfiguration {
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
@@ -48,7 +48,7 @@ You can also import the module directly using:
   imports = [
     (builtins.fetchTarball "https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz").nixosModules.home-manager
   ];
-  
+
   services.mcp-clients = {
     enable = true;
     # ... configuration ...
@@ -58,4 +58,4 @@ You can also import the module directly using:
 
 ## Advanced Configuration
 
-For more advanced configuration options, refer to the [module options documentation](../modules/options.md). 
+For more advanced configuration options, refer to the [module options documentation](../modules/options.md).

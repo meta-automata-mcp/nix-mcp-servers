@@ -6,11 +6,14 @@ This example demonstrates how to use the MCP servers module with NixOS.
 
 ```nix
 {
-  inputs.mcp-servers.url = "github:aloshy-ai/nix-mcp-servers";
-  
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    mcp-servers.url = "github:aloshy-ai/nix-mcp-servers";
+  };
+
   outputs = { self, nixpkgs, mcp-servers, ... }: {
     nixosConfigurations.hostname = nixpkgs.lib.nixosSystem {
-      # system is usually auto-detected with hardware-configuration.nix
+      # Your system architecture
       system = "x86_64-linux";
       modules = [
         mcp-servers.nixosModules.default
@@ -36,6 +39,23 @@ This example demonstrates how to use the MCP servers module with NixOS.
 }
 ```
 
+## Alternative Import Method
+
+You can also import the module directly using:
+
+```nix
+{
+  imports = [
+    (builtins.fetchTarball "https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz").nixosModules.default
+  ];
+
+  services.mcp-clients = {
+    enable = true;
+    # ... configuration ...
+  };
+}
+```
+
 ## Advanced Configuration
 
-For more advanced configuration options, refer to the [module options documentation](../modules/options.md). 
+For more advanced configuration options, refer to the [module options documentation](../modules/options.md).
