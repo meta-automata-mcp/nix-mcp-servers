@@ -12,6 +12,13 @@ A Nix flake for managing Model Control Protocol (MCP) server configurations acro
 
 ## Installation & Usage
 
+For detailed usage examples, see our documentation:
+- [NixOS Example](./docs/examples/nixos.md)
+- [Home Manager Example](./docs/examples/home-manager.md)
+- [Darwin Example](./docs/examples/darwin.md)
+
+Quick start:
+
 ### NixOS
 
 Add to your configuration.nix:
@@ -143,11 +150,29 @@ You should see a JSON configuration with your FileSystem server information.
 
 ## Documentation
 
-For detailed documentation on supported servers and clients, see the [docs](./docs) directory.
+- [Module Options](./docs/modules/options.md) - Detailed documentation of all available options
+- [Usage Examples](./docs/examples/) - Examples for different platforms
+- [Troubleshooting](./docs/troubleshooting.md) - Solutions for common issues
 
-## Troubleshooting
+You can also generate and view the options documentation directly with:
 
-If you encounter any issues with your configuration, please refer to our [troubleshooting guide](./docs/troubleshooting.md).
+```bash
+nix run github:aloshy-ai/nix-mcp-servers#view-docs
+```
+
+## Project Structure
+
+This project uses [flake-parts](https://flake.parts/) for a modular structure:
+
+- `modules/` - NixOS, Darwin, and Home Manager modules
+  - `common/` - Shared module definitions and options
+  - `nixos/` - NixOS-specific implementation
+  - `darwin/` - Darwin-specific implementation
+  - `home-manager/` - Home Manager implementation
+- `lib/` - Utility functions used by the modules
+- `docs/` - Documentation
+  - `examples/` - Usage examples
+  - `modules/` - Module documentation
 
 ## License
 

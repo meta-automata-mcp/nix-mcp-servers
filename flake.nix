@@ -25,6 +25,10 @@
     flake-parts.lib.mkFlake {inherit inputs;} {
       systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
 
+      imports = [
+        ./flake-modules/documentation.nix
+      ];
+
       perSystem = {
         system,
         pkgs,
@@ -46,15 +50,15 @@
         nixosModules = {
           default = {...}: {
             imports = [
-              ./modules/common.nix
-              ./modules/nixos.nix
+              ./modules/common
+              ./modules/nixos
             ];
           };
 
           home-manager = {...}: {
             imports = [
-              ./modules/common.nix
-              ./modules/home-manager.nix
+              ./modules/common
+              ./modules/home-manager
             ];
           };
         };
@@ -62,15 +66,15 @@
         darwinModules = {
           default = {...}: {
             imports = [
-              ./modules/common.nix
-              ./modules/darwin.nix
+              ./modules/common
+              ./modules/darwin
             ];
           };
 
           home-manager = {...}: {
             imports = [
-              ./modules/common.nix
-              ./modules/home-manager.nix
+              ./modules/common
+              ./modules/home-manager
             ];
           };
         };
