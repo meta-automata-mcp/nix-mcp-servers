@@ -18,8 +18,6 @@ jobs:
       permissions:
         id-token: write
         contents: write  # Write permission for GitHub Pages deployment
-        pages: write     # Required for GitHub Pages deployment
       with:
         visibility: public
         build-docs: true
-        docs-package: docs
