@@ -1,14 +1,19 @@
 {
-  description = "A flake providing Home Manager modules for MCP servers";
+  description = "MCP server configuration management for various clients";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils = {
-      url = "github:numtide/flake-utils";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    flake-utils.url = "github:numtide/flake-utils";
+
+    # Home-manager integration
     home-manager = {
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # Darwin integration
+    darwin = {
+      url = "github:lnl7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -18,250 +23,555 @@
     nixpkgs,
     flake-utils,
     home-manager,
-  }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        pkgs = nixpkgs.legacyPackages.${system};
-      in {
-        packages = {
-          default = pkgs.hello; # A placeholder default package
-        };
-      }
-    )
-    // {
-      # Home Manager module that can be added to homeConfigurations
-      homeManagerModules.default = {
+    darwin,
+    ...
+  }: let
+    # Common library of functions used across modules
+    lib = import ./lib {
+      inherit (nixpkgs) lib;
+    };
+
+    # Supported MCP server types
+    supportedServers = [
+      "anthropic"
+      "openai"
+      "together_ai"
+      "groq"
+      "mistral"
+      "ollama"
+    ];
+
+    # Supported client types
+    supportedClients = [
+      "claude_desktop"
+      "cursor_ide"
+      "vscode_extension"
+      "browser_extension"
+      "system_wide"
+    ];
+
+    # Platform-aware default config paths
+    defaultConfigPath = clientType: system: let
+      isDarwin = builtins.match ".*darwin" system != null;
+      darwinBase = "~/Library/Application Support";
+      linuxBase = "~/.config";
+    in
+      if isDarwin
+      then
+        {
+          # macOS paths
+          "claude_desktop" = "${darwinBase}/Claude/mcp-config.json";
+          "cursor_ide" = "${darwinBase}/Cursor/User/mcp-config.json";
+          "vscode_extension" = "${darwinBase}/Code/User/settings.json";
+          "browser_extension" = "${linuxBase}/mcp-browser-extension/config.json";
+          "system_wide" = "${linuxBase}/mcp/config.json";
+        }
+        .${clientType}
+        or "${linuxBase}/mcp/${clientType}-config.json"
+      else
+        {
+          # Linux paths
+          "claude_desktop" = "${linuxBase}/claude-desktop/mcp-config.json";
+          "cursor_ide" = "~/.cursor/mcp-config.json";
+          "vscode_extension" = "${linuxBase}/Code/User/settings.json";
+          "browser_extension" = "${linuxBase}/mcp-browser-extension/config.json";
+          "system_wide" = "${linuxBase}/mcp/config.json";
+        }
+        .${clientType}
+        or "${linuxBase}/mcp/${clientType}-config.json";
+
+    # Common module for defining options (shared between NixOS, Darwin and home-manager)
+    mkCommonModule = {isHomeManager ? false}: {
+      config,
+      lib,
+      pkgs,
+      ...
+    }: let
+      cfg = config.services.mcp-clients;
+      system = pkgs.stdenv.hostPlatform.system;
+
+      # Server submodule definition
+      serverModule = {
+        name,
         config,
-        lib,
-        pkgs,
         ...
-      }: let
-        cfg = config.services.mcp-servers;
+      }: {
+        options = {
+          enable = lib.mkEnableOption "this MCP server";
 
-        # Path validation and normalization utilities
-        pathUtils = {
-          # Expand ~ to $HOME - Replace with actual home path at generation time
-          expandHome = path:
-            if lib.hasPrefix "~" path
-            then builtins.replaceStrings ["~"] [config.home.homeDirectory] path
-            else path;
-
-          # Normalize path by removing trailing slashes and duplicate slashes
-          normalizePath = let
-            # Helper function to recursively normalize paths
-            go = path: let
-              # First remove trailing slash
-              noTrailing = lib.removeSuffix "/" path;
-              # Then replace multiple slashes with single slash
-              noMultiple = builtins.replaceStrings ["//" "/"] ["/" "/"] noTrailing;
-            in
-              if builtins.match ".*//" noMultiple != null
-              then go noMultiple
-              else noMultiple;
-          in
-            go;
-
-          # Validate a single path
-          validatePath = path: {
-            assertion = true; # Path existence will be checked at runtime
-            message = "Path validation will be performed at runtime: ${path}";
-          };
-        };
-
-        # Common types and utilities
-        serverTypes = {
-          github = {
-            name = "github";
-            requiredOptions = ["access-token"];
-            makeConfig = config: {
-              command = "npx";
-              args = [
-                "-y"
-                "@modelcontextprotocol/server-github"
-              ];
-              env = {
-                GITHUB_PERSONAL_ACCESS_TOKEN = config.access-token;
-              };
-            };
+          name = lib.mkOption {
+            type = lib.types.str;
+            default = name;
+            description = "User-friendly name for this server";
           };
 
-          gitlab = {
-            name = "gitlab";
-            requiredOptions = ["access-token"];
-            validateConfig = config:
-              lib.optional (config ? api-url) {
-                assertion = lib.hasPrefix "https://" config.api-url;
-                message = "GitLab API URL must start with https://";
-              };
-            makeConfig = config: {
-              command = "npx";
-              args = [
-                "-y"
-                "@modelcontextprotocol/server-gitlab"
-              ];
-              env =
-                {
-                  GITLAB_PERSONAL_ACCESS_TOKEN = config.access-token;
-                }
-                // lib.optionalAttrs (config ? api-url) {
-                  GITLAB_API_URL = config.api-url;
+          type = lib.mkOption {
+            type = lib.types.enum supportedServers;
+            default = name;
+            description = "Type of MCP server";
+          };
+
+          baseUrl = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "Base URL for the API (optional)";
+          };
+
+          credentials = lib.mkOption {
+            type = lib.types.submodule {
+              options = {
+                apiKey = lib.mkOption {
+                  type = lib.types.str;
+                  description = "API key for authentication";
                 };
+                # Add other credential fields as needed
+              };
             };
-          };
-
-          filesystem = {
-            name = "filesystem";
-            requiredOptions = ["allowed-paths"];
-            validateConfig = config:
-              map pathUtils.validatePath config.allowed-paths;
-            makeConfig = config: {
-              command = "npx";
-              args =
-                [
-                  "-y"
-                  "@modelcontextprotocol/server-filesystem"
-                ]
-                ++ (map (p: pathUtils.normalizePath (pathUtils.expandHome p)) config.allowed-paths);
-            };
+            description = "Credentials for this MCP server";
           };
         };
+      };
 
-        # Client type definitions
-        clientTypes = {
-          "claude-desktop" = {
-            name = "claude-desktop";
-            configDir = "Library/Application Support/Claude";
-            configFile = "claude_desktop_config.json";
-            validatePlatform = system: lib.hasPrefix "aarch64-darwin" system || lib.hasPrefix "x86_64-darwin" system;
+      # Client submodule definition
+      clientModule = {
+        name,
+        config,
+        ...
+      }: {
+        options = {
+          enable = lib.mkEnableOption "this MCP client";
+
+          clientType = lib.mkOption {
+            type = lib.types.enum supportedClients;
+            default = name;
+            description = "Type of MCP client";
           };
-          "cursor" = {
-            name = "cursor";
-            configDir = ".cursor";
-            configFile = "mcp.json";
-            validatePlatform = system: lib.hasPrefix "aarch64-darwin" system || lib.hasPrefix "x86_64-darwin" system;
+
+          configPath = lib.mkOption {
+            type = lib.types.str;
+            default = defaultConfigPath config.clientType system;
+            description = "Path to the client configuration file";
+          };
+
+          servers = lib.mkOption {
+            type = lib.types.listOf lib.types.str;
+            default = builtins.attrNames (lib.filterAttrs (n: v: v.enable) cfg.servers);
+            description = "List of MCP servers to use with this client";
           };
         };
+      };
 
-        # Get supported clients based on platform
-        supportedClients =
-          lib.filterAttrs
-          (name: client: client.validatePlatform pkgs.stdenv.hostPlatform.system)
-          clientTypes;
+      # Function to generate client configuration
+      mkClientConfig = clientName: clientConfig: let
+        # Get only enabled servers that this client wants to use
+        relevantServers =
+          builtins.filter
+          (server: builtins.elem server.name clientConfig.servers)
+          (lib.mapAttrsToList (name: server: server // {inherit name;})
+            (lib.filterAttrs (n: v: v.enable) cfg.servers));
 
-        # Get config path for a client
-        configPath = client: let
-          clientType = clientTypes.${client} or (throw "Unsupported client: ${client}");
-        in "${clientType.configDir}/${clientType.configFile}";
+        # Format a server config for a specific client type
+        formatServerForClient = server:
+          if clientConfig.clientType == "claude_desktop"
+          then {
+            name = "${server.name} API";
+            type = server.type;
+            apiKey = server.credentials.apiKey;
+            baseUrl = server.baseUrl or null;
+          }
+          else if clientConfig.clientType == "cursor_ide"
+          then {
+            provider = server.type;
+            apiKey = server.credentials.apiKey;
+            baseUrl = server.baseUrl or null;
+          }
+          else if clientConfig.clientType == "vscode_extension"
+          then {
+            name = server.name;
+            type = server.type;
+            apiKey = server.credentials.apiKey;
+            baseUrl = server.baseUrl or null;
+          }
+          else {
+            # Generic format
+            name = server.name;
+            type = server.type;
+            apiKey = server.credentials.apiKey;
+            baseUrl = server.baseUrl or null;
+          };
 
-        # Validate client configuration
-        validateClient = client:
-          if ! clientTypes ? ${client}
-          then throw "Unsupported client: ${client}"
-          else if ! clientTypes.${client}.validatePlatform pkgs.stdenv.hostPlatform.system
-          then throw "Client ${client} is not supported on ${pkgs.stdenv.hostPlatform.system}"
-          else true;
+        # Format the list of servers for this client
+        formattedServers = map formatServerForClient relevantServers;
 
-        # Validate server configuration
-        validateServer = serverType: serverConfig: let
-          missingOptions =
-            lib.filter
-            (opt: !builtins.hasAttr opt serverConfig)
-            serverTypes.${serverType}.requiredOptions;
+        # Generate the final client configuration structure
+        clientConfigStructure =
+          if clientConfig.clientType == "claude_desktop"
+          then {
+            mcpServers = formattedServers;
+          }
+          else if clientConfig.clientType == "cursor_ide"
+          then {
+            mcpConfig = {
+              enabled = true;
+              servers = formattedServers;
+            };
+          }
+          else if clientConfig.clientType == "vscode_extension"
+          then {
+            "mcp.enabled" = true;
+            "mcp.servers" = formattedServers;
+          }
+          else {
+            # Generic format
+            mcpEnabled = true;
+            servers = formattedServers;
+          };
+      in
+        builtins.toJSON clientConfigStructure;
 
-          # Run server-specific validation if it exists
-          serverValidation =
-            if serverTypes.${serverType} ? validateConfig
-            then serverTypes.${serverType}.validateConfig serverConfig
-            else [];
+      # Function to generate client file content
+      mkClientContent = clientName: clientConfig:
+        pkgs.writeText "${clientName}-config.json" (mkClientConfig clientName clientConfig);
+
+      # Function to expand path with home directory
+      expandHome = path: let
+        homeDir =
+          if isHomeManager
+          then config.home.homeDirectory
+          else "/home/PLACEHOLDER";
+        # Replace ~ with actual home directory
+        expanded = builtins.replaceStrings ["~"] [homeDir] path;
+      in
+        expanded;
+
+      # Get relative path for home-manager
+      getRelativePath = path: let
+        homeDir =
+          if isHomeManager
+          then config.home.homeDirectory
+          else "";
+        # Strip home directory prefix if present
+        relative = builtins.replaceStrings ["${homeDir}/"] [""] (expandHome path);
+      in
+        relative;
+    in {
+      options.services.mcp-clients = {
+        enable = lib.mkEnableOption "MCP client configurations";
+
+        stateDir = lib.mkOption {
+          type = lib.types.str;
+          default =
+            if isHomeManager
+            then "~/.local/state/mcp-setup"
+            else "/var/lib/mcp-setup";
+          description = "Directory to store MCP configuration state";
+        };
+
+        servers = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.submodule serverModule);
+          default = {};
+          description = "MCP servers configuration";
+        };
+
+        clients = lib.mkOption {
+          type = lib.types.attrsOf (lib.types.submodule clientModule);
+          default = {};
+          description = "MCP clients to configure";
+        };
+      };
+
+      # Return expanded path and config content for use in specific modules
+      config._module.extraArgs = {
+        mcp-clients = {
+          inherit expandHome getRelativePath mkClientContent;
+          enabledClients = lib.filterAttrs (_: c: c.enable) cfg.clients;
+        };
+      };
+    };
+
+    # NixOS module
+    nixosModule = {
+      config,
+      lib,
+      pkgs,
+      mcp-clients,
+      ...
+    }: let
+      cfg = config.services.mcp-clients;
+    in {
+      config = lib.mkIf cfg.enable {
+        # Ensure state directory exists
+        system.activationScripts.createMcpStateDir = ''
+          mkdir -p ${cfg.stateDir}
+          chmod 755 ${cfg.stateDir}
+        '';
+
+        # Generate configuration files for each enabled client
+        system.activationScripts.setupMcpConfigs = let
+          # Generate activation script for each client
+          mkClientScript = name: clientConfig: let
+            configFile = mcp-clients.mkClientContent name clientConfig;
+            configPath = mcp-clients.expandHome clientConfig.configPath;
+            configDir = builtins.dirOf configPath;
+          in ''
+            # Create config directory if it doesn't exist
+            mkdir -p "${configDir}"
+
+            # Write the config file
+            cp ${configFile} "${configPath}"
+            echo "Generated MCP config for ${name} at ${configPath}"
+          '';
+
+          # Combine all client scripts
+          clientScripts = lib.mapAttrsToList mkClientScript mcp-clients.enabledClients;
+        in {
+          text = lib.concatStringsSep "\n" clientScripts;
+        };
+      };
+    };
+
+    # Darwin module
+    darwinModule = {
+      config,
+      lib,
+      pkgs,
+      mcp-clients,
+      ...
+    }: let
+      cfg = config.services.mcp-clients;
+    in {
+      config = lib.mkIf cfg.enable {
+        # Ensure state directory exists
+        system.activationScripts.createMcpStateDir = {
+          text = ''
+            mkdir -p ${cfg.stateDir}
+            chmod 755 ${cfg.stateDir}
+          '';
+          deps = [];
+        };
+
+        # Generate configuration files for each enabled client
+        system.activationScripts.setupMcpConfigs = let
+          # Generate activation script for each client
+          mkClientScript = name: clientConfig: let
+            configFile = mcp-clients.mkClientContent name clientConfig;
+            configPath = mcp-clients.expandHome clientConfig.configPath;
+            configDir = builtins.dirOf configPath;
+          in ''
+            # Create config directory if it doesn't exist
+            mkdir -p "${configDir}"
+
+            # Write the config file
+            cp ${configFile} "${configPath}"
+            echo "Generated MCP config for ${name} at ${configPath}"
+          '';
+
+          # Combine all client scripts
+          clientScripts = lib.mapAttrsToList mkClientScript mcp-clients.enabledClients;
+        in {
+          text = lib.concatStringsSep "\n" clientScripts;
+          deps = ["createMcpStateDir"];
+        };
+      };
+    };
+
+    # Home-manager module
+    homeManagerModule = {
+      config,
+      lib,
+      pkgs,
+      mcp-clients,
+      ...
+    }: let
+      cfg = config.services.mcp-clients;
+    in {
+      config = lib.mkIf cfg.enable {
+        # Generate home.file entries for each enabled client
+        home.file = let
+          # Generate file entry for each client
+          mkClientFile = name: clientConfig: let
+            configContent = mcp-clients.mkClientContent name clientConfig;
+            relPath = mcp-clients.getRelativePath clientConfig.configPath;
+          in {
+            "${relPath}".source = configContent;
+          };
+
+          # Combine all client file entries
+          clientFiles = lib.mapAttrsToList mkClientFile mcp-clients.enabledClients;
         in
-          if builtins.length missingOptions > 0
-          then throw "Missing required options for ${serverType}: ${toString missingOptions}"
-          else serverConfig;
+          lib.foldl' lib.recursiveUpdate {} clientFiles;
 
-        # Generate the configuration
-        makeConfig = {
-          mcpServers = lib.foldl lib.recursiveUpdate {} (
-            [{}]
-            ++ lib.mapAttrsToList (
-              name: server:
-                if server.enable
-                then {${name} = serverTypes.${name}.makeConfig server;}
-                else {}
-            )
-            cfg.servers
-          );
-        };
-      in {
-        options.services.mcp-servers = lib.mkOption {
-          type = with lib.types;
-            submodule {
-              options = with lib.types; {
-                # For backward compatibility
-                clients = lib.mkOption {
-                  type = listOf str;
-                  description = "List of MCP clients to configure (deprecated, clients are now auto-detected)";
-                  default = [];
-                };
-                servers = lib.mkOption {
-                  type = attrsOf (submodule ({name, ...}: {
-                    options = with lib.types; {
-                      enable = lib.mkEnableOption "MCP server ${name}";
-                      access-token = lib.mkOption {
-                        type = str;
-                        description = "Access token for the ${name} MCP server";
-                        example = "xxxxxxxxxxxxxxxxxxxx";
-                        default = "";
-                      };
-                      api-url = lib.mkOption {
-                        type = str;
-                        description = "API URL for the ${name} MCP server (if applicable)";
-                        example = "https://gitlab.com/api/v4";
-                        default = "";
-                      };
-                      allowed-paths = lib.mkOption {
-                        type = listOf str;
-                        description = "List of filesystem paths to allow access to";
-                        example = ["/Users/username/Desktop" "/path/to/other/allowed/dir"];
-                        default = [];
-                      };
-                    };
-                  }));
-                  default = {};
-                  description = "Configuration for MCP servers";
-                };
+        # Ensure state directory exists
+        home.activation.createMcpStateDir = let
+          stateDir = mcp-clients.expandHome cfg.stateDir;
+        in
+          lib.hm.dag.entryAfter ["writeBoundary"] ''
+            mkdir -p "${stateDir}"
+          '';
+      };
+    };
+
+    # CLI tool generation
+    mkCliTool = pkgs: let
+      configTemplate = pkgs.writeText "mcp-config-template.nix" ''
+        # This file was generated by mcp-setup
+        {
+          services.mcp-clients = {
+            enable = true;
+
+            servers = {
+              # Example servers (uncomment and configure as needed)
+              /*
+              anthropic = {
+                enable = true;
+                name = "Anthropic";
+                type = "anthropic";
+                credentials.apiKey = "YOUR_API_KEY"; # Replace this
               };
+              openai = {
+                enable = true;
+                name = "OpenAI";
+                type = "openai";
+                credentials.apiKey = "YOUR_API_KEY"; # Replace this
+              };
+              */
             };
-          description = "Configuration for MCP servers and clients";
-        };
 
-        config = {
-          assertions =
-            [
-              {
-                assertion =
-                  builtins.all (client: clientTypes ? ${client} && clientTypes.${client}.validatePlatform pkgs.stdenv.hostPlatform.system)
-                  (lib.unique (cfg.clients ++ builtins.attrNames supportedClients));
-                message = "One or more configured clients are not supported on the current platform";
-              }
-            ]
-            ++ lib.flatten (lib.mapAttrsToList (
-                name: server:
-                  if server.enable && serverTypes.${name} ? validateConfig
-                  then serverTypes.${name}.validateConfig server
-                  else []
-              )
-              cfg.servers);
+            clients = {
+              # Example clients (uncomment and configure as needed)
+              /*
+              claude_desktop = {
+                enable = true;
+                clientType = "claude_desktop";
+                # configPath will default to the correct location for your OS
+              };
+              cursor_ide = {
+                enable = true;
+                clientType = "cursor_ide";
+                # configPath will default to the correct location for your OS
+              };
+              */
+            };
+          };
+        }
+      '';
+    in
+      pkgs.writeScriptBin "mcp-setup" ''
+        #!${pkgs.runtimeShell}
 
-          # Create config files for all supported clients
-          home.file = lib.mkMerge (
-            lib.mapAttrsToList (
-              name: client: {
-                "${configPath name}".text = builtins.toJSON makeConfig;
-              }
-            )
-            supportedClients
-          );
-        };
+        set -e
+
+        CONFIG_DIR="$HOME/.config/mcp-setup"
+        CONFIG_FILE="$CONFIG_DIR/config.nix"
+
+        mkdir -p "$CONFIG_DIR"
+
+        echo "MCP Client Configuration Setup Tool"
+        echo "----------------------------------"
+        echo ""
+        echo "This tool will help you create a Nix configuration for MCP servers."
+        echo ""
+
+        # Check if config already exists
+        if [ -f "$CONFIG_FILE" ]; then
+          echo "Configuration file already exists at $CONFIG_FILE"
+          echo "Do you want to:"
+          echo "  1. Edit the existing configuration"
+          echo "  2. Create a new configuration (will overwrite existing)"
+          echo "  3. Exit"
+          read -p "Enter your choice (1-3): " choice
+
+          case "$choice" in
+            1)
+              if command -v "$EDITOR" >/dev/null 2>&1; then
+                $EDITOR "$CONFIG_FILE"
+              elif command -v nano >/dev/null 2>&1; then
+                nano "$CONFIG_FILE"
+              elif command -v vi >/dev/null 2>&1; then
+                vi "$CONFIG_FILE"
+              else
+                echo "No editor found. Please manually edit $CONFIG_FILE"
+              fi
+              ;;
+            2)
+              cp ${configTemplate} "$CONFIG_FILE"
+              echo "New configuration template created at $CONFIG_FILE"
+              echo "Please edit this file to configure your MCP servers and clients."
+              ;;
+            *)
+              echo "Exiting without changes."
+              exit 0
+              ;;
+          esac
+        else
+          # Create new config
+          cp ${configTemplate} "$CONFIG_FILE"
+          echo "Configuration template created at $CONFIG_FILE"
+          echo "Please edit this file to configure your MCP servers and clients."
+        fi
+
+        echo ""
+        echo "To use with NixOS, add this to your configuration.nix:"
+        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\") ];"
+        echo "  services.mcp-clients = (import $CONFIG_FILE).services.mcp-clients;"
+        echo ""
+        echo "To use with home-manager, add this to your home.nix:"
+        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\").homeManagerModules.default ];"
+        echo "  services.mcp-clients = (import $CONFIG_FILE).services.mcp-clients;"
+        echo ""
+        echo "To use with nix-darwin, add this to your darwin-configuration.nix:"
+        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\").darwinModules.default ];"
+        echo "  services.mcp-clients = (import $CONFIG_FILE).services.mcp-clients;"
+      '';
+
+    # Per-system outputs
+    perSystem = system: let
+      pkgs = nixpkgs.legacyPackages.${system};
+    in {
+      # CLI setup tool
+      packages.mcp-setup-cli = mkCliTool pkgs;
+      packages.default = mkCliTool pkgs;
+
+      # App definition for easy running
+      apps.default = {
+        type = "app";
+        program = "${mkCliTool pkgs}/bin/mcp-setup";
+      };
+    };
+  in
+    # Combine all outputs
+    flake-utils.lib.eachDefaultSystem perSystem
+    // {
+      # NixOS module
+      nixosModules.default = {...}: {
+        imports = [
+          (mkCommonModule {isHomeManager = false;})
+          nixosModule
+        ];
+      };
+
+      # Darwin module
+      darwinModules.default = {...}: {
+        imports = [
+          (mkCommonModule {isHomeManager = false;})
+          darwinModule
+        ];
+      };
+
+      # Home-manager module
+      homeManagerModules.default = {...}: {
+        imports = [
+          (mkCommonModule {isHomeManager = true;})
+          homeManagerModule
+        ];
+      };
+
+      # Expose individual modules for advanced use cases
+      lib = {
+        mkCommonModule = mkCommonModule;
+        nixosModule = nixosModule;
+        darwinModule = darwinModule;
+        homeManagerModule = homeManagerModule;
       };
     };
 }
