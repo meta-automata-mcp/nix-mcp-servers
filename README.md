@@ -164,25 +164,7 @@ nix run github:aloshy-ai/nix-mcp-servers#view-docs
 
 This repository is configured to automatically build and deploy documentation to GitHub Pages. The documentation is generated from the `docs` package in the flake and deployed whenever changes are pushed to the main branch.
 
-### Enabling GitHub Pages Deployment
-
-When the CI workflow first runs, it may fail with an error message like:
-```
-Error: Deployment rejected due to environment protection rules.
-The branch 'main' is not allowed to deploy to github-pages due to environment protection rules.
-```
-
-To fix this and enable GitHub Pages deployment:
-
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Environments**
-3. Click on the **github-pages** environment
-4. Under "Deployment branches and tags," select one of the following:
-   - **No restriction** - allows any branch to deploy
-   - **Selected branches and tags** - add your main branch
-5. Click **Save protection rules**
-
-After configuring these settings, re-run the CI workflow and the documentation should be deployed successfully.
+The deployment is handled by the [peaceiris/actions-gh-pages](https://github.com/peaceiris/actions-gh-pages) action, which creates a `gh-pages` branch with the documentation. This approach doesn't require any manual configuration of the GitHub Pages environment.
 
 The URL to the generated documentation will be displayed in the GitHub repository details once deployed.
 
