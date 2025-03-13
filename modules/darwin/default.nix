@@ -1,4 +1,4 @@
-# modules/darwin.nix - Darwin-specific implementation
+# modules/darwin/default.nix - Darwin-specific implementation
 {
   config,
   lib,

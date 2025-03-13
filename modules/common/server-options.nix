@@ -1,4 +1,4 @@
-# modules/server-options.nix
+# modules/common/server-options.nix
 {lib}: {name, ...}: {
   options = {
     enable = lib.mkEnableOption "this MCP server";

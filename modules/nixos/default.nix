@@ -1,4 +1,4 @@
-# modules/nixos.nix - NixOS-specific implementation
+# modules/nixos/default.nix - NixOS-specific implementation
 {
   config,
   lib,

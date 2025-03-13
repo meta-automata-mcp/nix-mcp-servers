@@ -1,4 +1,4 @@
-# modules/home-manager.nix - Home Manager implementation
+# modules/home-manager/default.nix - Home Manager implementation
 {
   config,
   lib,

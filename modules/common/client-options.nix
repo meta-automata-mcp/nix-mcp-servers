@@ -1,4 +1,4 @@
-# modules/client-options.nix
+# modules/common/client-options.nix
 {lib}: {name, ...}: {
   options = {
     enable = lib.mkEnableOption "this MCP client";
