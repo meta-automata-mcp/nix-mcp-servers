@@ -207,7 +207,7 @@
       mkClientContent = clientName: clientConfig:
         pkgs.writeText "${clientName}-config.json" (mkClientConfig clientName clientConfig);
 
-      # Function to expand path with home directory
+      # Function to expand path with home directory (using lib.paths.expandHome)
       expandHome = path: let
         homeDir =
           if isHomeManager
@@ -215,21 +215,23 @@
           else if pkgs.stdenv.isDarwin
           then "/Users/${builtins.getEnv "USER"}"
           else "/home/${builtins.getEnv "USER"}";
-        # Replace ~ with actual home directory
-        expanded = builtins.replaceStrings ["~"] [homeDir] path;
       in
-        expanded;
+        lib.paths.expandHome {
+          inherit path;
+          homeDirectory = homeDir;
+        };
 
-      # Get relative path for home-manager
+      # Get relative path for home-manager (using lib.paths.stripHomePrefix)
       getRelativePath = path: let
         homeDir =
           if isHomeManager
           then config.home.homeDirectory
           else "";
-        # Strip home directory prefix if present
-        relative = builtins.replaceStrings ["${homeDir}/"] [""] (expandHome path);
       in
-        relative;
+        lib.paths.stripHomePrefix {
+          path = expandHome path;
+          homeDirectory = homeDir;
+        };
     in {
       options.services.mcp-clients = {
         enable = lib.mkEnableOption "MCP client configurations";
