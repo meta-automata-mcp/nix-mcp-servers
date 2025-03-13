@@ -1,51 +1,41 @@
 # lib/servers.nix
-{ lib }:
-
-{
+{lib}: {
   # List of supported server types
   supportedTypes = [
-    "anthropic"
-    "openai"
-    "together_ai"
-    "groq"
-    "mistral"
-    "ollama"
+    "filesystem"
   ];
-  
+
   # Default base URLs for known services
   defaultBaseUrls = {
-    anthropic = "https://api.anthropic.com";
-    openai = "https://api.openai.com";
-    together_ai = "https://api.together.xyz";
-    groq = "https://api.groq.com";
-    mistral = "https://api.mistral.ai";
-    ollama = "http://localhost:11434"; # Default local Ollama instance
+    filesystem = null; # FileSystem doesn't need a base URL
   };
-  
+
   # Format server configuration for specific client types
-  formatForClient = { server, clientType }:
-    if clientType == "claude_desktop" then {
+  formatForClient = {
+    server,
+    clientType,
+  }:
+    if clientType == "claude_desktop"
+    then {
       name = "${server.name} API";
       type = server.type;
       apiKey = server.credentials.apiKey;
       baseUrl = server.baseUrl or lib.servers.defaultBaseUrls.${server.type} or null;
-    }
-    else if clientType == "cursor_ide" then {
-      provider = server.type;
-      apiKey = server.credentials.apiKey;
-      baseUrl = server.baseUrl or lib.servers.defaultBaseUrls.${server.type} or null;
-    }
-    else if clientType == "vscode_extension" then {
-      name = server.name;
-      type = server.type;
-      apiKey = server.credentials.apiKey;
-      baseUrl = server.baseUrl or lib.servers.defaultBaseUrls.${server.type} or null;
+      # For filesystem type, add path parameter for model directory
+      path =
+        if server.type == "filesystem"
+        then server.path or (throw "Path must be specified for filesystem server type")
+        else null;
     }
     else {
-      # Generic format
+      # Generic format (fallback only)
       name = server.name;
       type = server.type;
       apiKey = server.credentials.apiKey;
       baseUrl = server.baseUrl or lib.servers.defaultBaseUrls.${server.type} or null;
+      path =
+        if server.type == "filesystem"
+        then server.path or (throw "Path must be specified for filesystem server type")
+        else null;
     };
 }

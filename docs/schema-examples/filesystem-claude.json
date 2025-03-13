@@ -1,0 +1,11 @@
+{
+  "mcpServers": [
+    {
+      "name": "Local FileSystem API",
+      "type": "filesystem",
+      "apiKey": "not-needed",
+      "baseUrl": null,
+      "path": "/path/to/models"
+    }
+  ]
+} 

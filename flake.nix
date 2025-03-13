@@ -33,21 +33,12 @@
 
     # Supported MCP server types
     supportedServers = [
-      "anthropic"
-      "openai"
-      "together_ai"
-      "groq"
-      "mistral"
-      "ollama"
+      "filesystem"
     ];
 
     # Supported client types
     supportedClients = [
       "claude_desktop"
-      "cursor_ide"
-      "vscode_extension"
-      "browser_extension"
-      "system_wide"
     ];
 
     # Platform-aware default config paths
@@ -61,10 +52,6 @@
         {
           # macOS paths
           "claude_desktop" = "${darwinBase}/Claude/mcp-config.json";
-          "cursor_ide" = "${darwinBase}/Cursor/User/mcp-config.json";
-          "vscode_extension" = "${darwinBase}/Code/User/settings.json";
-          "browser_extension" = "${linuxBase}/mcp-browser-extension/config.json";
-          "system_wide" = "${linuxBase}/mcp/config.json";
         }
         .${clientType}
         or "${linuxBase}/mcp/${clientType}-config.json"
@@ -72,10 +59,6 @@
         {
           # Linux paths
           "claude_desktop" = "${linuxBase}/claude-desktop/mcp-config.json";
-          "cursor_ide" = "~/.cursor/mcp-config.json";
-          "vscode_extension" = "${linuxBase}/Code/User/settings.json";
-          "browser_extension" = "${linuxBase}/mcp-browser-extension/config.json";
-          "system_wide" = "${linuxBase}/mcp/config.json";
         }
         .${clientType}
         or "${linuxBase}/mcp/${clientType}-config.json";
@@ -115,6 +98,12 @@
             type = lib.types.nullOr lib.types.str;
             default = null;
             description = "Base URL for the API (optional)";
+          };
+
+          path = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = null;
+            description = "File system path for filesystem server type. This should point to a directory containing model files or a specific model file.";
           };
 
           credentials = lib.mkOption {
@@ -178,19 +167,12 @@
             type = server.type;
             apiKey = server.credentials.apiKey;
             baseUrl = server.baseUrl or null;
-          }
-          else if clientConfig.clientType == "cursor_ide"
-          then {
-            provider = server.type;
-            apiKey = server.credentials.apiKey;
-            baseUrl = server.baseUrl or null;
-          }
-          else if clientConfig.clientType == "vscode_extension"
-          then {
-            name = server.name;
-            type = server.type;
-            apiKey = server.credentials.apiKey;
-            baseUrl = server.baseUrl or null;
+            # Only include path for filesystem type servers
+            # This points to local model files for the Claude client to use
+            path =
+              if server.type == "filesystem"
+              then server.path or (throw "Path must be specified for filesystem server type")
+              else null;
           }
           else {
             # Generic format
@@ -198,6 +180,10 @@
             type = server.type;
             apiKey = server.credentials.apiKey;
             baseUrl = server.baseUrl or null;
+            path =
+              if server.type == "filesystem"
+              then server.path or (throw "Path must be specified for filesystem server type")
+              else null;
           };
 
         # Format the list of servers for this client
@@ -209,20 +195,8 @@
           then {
             mcpServers = formattedServers;
           }
-          else if clientConfig.clientType == "cursor_ide"
-          then {
-            mcpConfig = {
-              enabled = true;
-              servers = formattedServers;
-            };
-          }
-          else if clientConfig.clientType == "vscode_extension"
-          then {
-            "mcp.enabled" = true;
-            "mcp.servers" = formattedServers;
-          }
           else {
-            # Generic format
+            # Generic format (fallback only)
             mcpEnabled = true;
             servers = formattedServers;
           };
@@ -238,7 +212,9 @@
         homeDir =
           if isHomeManager
           then config.home.homeDirectory
-          else "/home/PLACEHOLDER";
+          else if pkgs.stdenv.isDarwin
+          then "/Users/${builtins.getEnv "USER"}"
+          else "/home/${builtins.getEnv "USER"}";
         # Replace ~ with actual home directory
         expanded = builtins.replaceStrings ["~"] [homeDir] path;
       in
@@ -420,34 +396,26 @@
             enable = true;
 
             servers = {
-              # Example servers (uncomment and configure as needed)
+              # Example filesystem server configuration
               /*
-              anthropic = {
+              filesystem = {
                 enable = true;
-                name = "Anthropic";
-                type = "anthropic";
-                credentials.apiKey = "YOUR_API_KEY"; # Replace this
-              };
-              openai = {
-                enable = true;
-                name = "OpenAI";
-                type = "openai";
-                credentials.apiKey = "YOUR_API_KEY"; # Replace this
+                name = "Local FileSystem";
+                type = "filesystem";
+                # Path to directory containing models or to a specific model file
+                path = "/path/to/models";
+                # API key isn't used for filesystem but is required by the schema
+                credentials.apiKey = "not-needed";
               };
               */
             };
 
             clients = {
-              # Example clients (uncomment and configure as needed)
+              # Example Claude Desktop configuration
               /*
               claude_desktop = {
                 enable = true;
                 clientType = "claude_desktop";
-                # configPath will default to the correct location for your OS
-              };
-              cursor_ide = {
-                enable = true;
-                clientType = "cursor_ide";
                 # configPath will default to the correct location for your OS
               };
               */
@@ -469,7 +437,11 @@
         echo "MCP Client Configuration Setup Tool"
         echo "----------------------------------"
         echo ""
-        echo "This tool will help you create a Nix configuration for MCP servers."
+        echo "This tool helps you configure Claude Desktop to use local model files."
+        echo ""
+        echo "Supported configurations:"
+        echo "  - Server: FileSystem (local model files)"
+        echo "  - Client: Claude Desktop"
         echo ""
 
         # Check if config already exists
@@ -512,11 +484,11 @@
 
         echo ""
         echo "To use with NixOS, add this to your configuration.nix:"
-        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\") ];"
+        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\").nixosModules.default ];"
         echo "  services.mcp-clients = (import $CONFIG_FILE).services.mcp-clients;"
         echo ""
         echo "To use with home-manager, add this to your home.nix:"
-        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\").homeManagerModules.default ];"
+        echo "  imports = [ (builtins.fetchTarball \"https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz\").nixosModules.home-manager ];"
         echo "  services.mcp-clients = (import $CONFIG_FILE).services.mcp-clients;"
         echo ""
         echo "To use with nix-darwin, add this to your darwin-configuration.nix:"
@@ -542,28 +514,40 @@
     # Combine all outputs
     flake-utils.lib.eachDefaultSystem perSystem
     // {
-      # NixOS module
-      nixosModules.default = {...}: {
-        imports = [
-          (mkCommonModule {isHomeManager = false;})
-          nixosModule
-        ];
+      # NixOS modules
+      nixosModules = {
+        default = {...}: {
+          imports = [
+            (mkCommonModule {isHomeManager = false;})
+            nixosModule
+          ];
+        };
+
+        # Include Home Manager module as a NixOS module for compatibility
+        home-manager = {...}: {
+          imports = [
+            (mkCommonModule {isHomeManager = true;})
+            homeManagerModule
+          ];
+        };
       };
 
-      # Darwin module
-      darwinModules.default = {...}: {
-        imports = [
-          (mkCommonModule {isHomeManager = false;})
-          darwinModule
-        ];
-      };
+      # Darwin modules
+      darwinModules = {
+        default = {...}: {
+          imports = [
+            (mkCommonModule {isHomeManager = false;})
+            darwinModule
+          ];
+        };
 
-      # Home-manager module
-      homeManagerModules.default = {...}: {
-        imports = [
-          (mkCommonModule {isHomeManager = true;})
-          homeManagerModule
-        ];
+        # Include Home Manager module as a Darwin module for compatibility
+        home-manager = {...}: {
+          imports = [
+            (mkCommonModule {isHomeManager = true;})
+            homeManagerModule
+          ];
+        };
       };
 
       # Expose individual modules for advanced use cases
