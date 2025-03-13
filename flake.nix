@@ -33,7 +33,6 @@
         # CLI tool package
         packages.mcp-setup = pkgs.writeShellScriptBin "mcp-setup" ''
           echo "MCP Setup CLI"
-          echo "=============="
           echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
         '';
 
