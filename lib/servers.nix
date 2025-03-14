@@ -16,17 +16,7 @@
       # Format according to MCP standards with command, args, and env
       {
         command = server.command;
-        args =
-          if server.type == "filesystem" && server.paths != []
-          then
-            # Add default args for filesystem server if not already specified
-            (
-              if server.args == []
-              then ["-y" "@modelcontextprotocol/server-filesystem"]
-              else server.args
-            )
-            ++ server.paths
-          else server.args;
+        args = server.args;
       }
       // (
         if server.env != {}
@@ -37,17 +27,7 @@
       # Generic fallback format
       {
         command = server.command;
-        args =
-          if server.type == "filesystem" && server.paths != []
-          then
-            # Add default args for filesystem server if not already specified
-            (
-              if server.args == []
-              then ["-y" "@modelcontextprotocol/server-filesystem"]
-              else server.args
-            )
-            ++ server.paths
-          else server.args;
+        args = server.args;
       }
       // (
         if server.env != {}

@@ -21,8 +21,9 @@
             name = "Local FileSystem";
             type = "filesystem";
             command = "npx";
-            args = ["-y" "@modelcontextprotocol/server-filesystem"];
-            paths = [
+            args = [
+              "-y"
+              "@modelcontextprotocol/server-filesystem"
               "/home/user/Documents"
               "/home/user/Projects"
             ];

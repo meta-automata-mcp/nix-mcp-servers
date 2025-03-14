@@ -61,20 +61,5 @@
         "GITHUB_PERSONAL_ACCESS_TOKEN" = "ghp_123456789abcdef";
       };
     };
-
-    # Provide some backwards compatibility and convenience
-    paths = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = ''
-        Convenience option for filesystem paths. These will be added to the args.
-        For filesystem servers, these are the directories you want to allow access to.
-        If you need more control, use the 'args' option directly.
-      '';
-      example = [
-        "/home/user/Documents"
-        "/home/user/Projects"
-      ];
-    };
   };
 }
