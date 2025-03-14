@@ -35,25 +35,18 @@
     (options.base or {})
   );
 
-  # Render server options
+  # Render all server related options
   serverOptions = lib.concatStringsSep "\n" (
     lib.mapAttrsToList
     (name: opt: renderOption "services.mcpServers.servers.<name>.${name}" opt)
     (options.servers or {})
   );
 
-  # Render client options
+  # Render all client related options
   clientOptions = lib.concatStringsSep "\n" (
     lib.mapAttrsToList
     (name: opt: renderOption "services.mcpServers.clients.<name>.${name}" opt)
     (options.clients or {})
-  );
-
-  # Render filesystem server options
-  filesystemOptions = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList
-    (name: opt: renderOption "services.mcpServers.servers.<name>.filesystem.${name}" opt)
-    (options.filesystem or {})
   );
 in ''
   <!DOCTYPE html>
@@ -107,11 +100,6 @@ in ''
         <article>
           <h3>Client Options</h3>
           ${clientOptions}
-        </article>
-
-        <article>
-          <h3>Filesystem Server Options</h3>
-          ${filesystemOptions}
         </article>
       </section>
 
