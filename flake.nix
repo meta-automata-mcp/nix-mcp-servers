@@ -29,20 +29,17 @@
         system,
         pkgs,
         ...
-      }: {
-        # CLI tool package
-        packages.mcp-setup = pkgs.writeShellScriptBin "mcp-setup" ''
+      }: let
+        mcp-setup = pkgs.writeShellScriptBin "mcp-setup" ''
           echo "MCP Setup CLI"
           echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
         '';
+      in {
+        # CLI tool package
+        packages.mcp-setup = mcp-setup;
 
         # Set the default package
-        packages.default = pkgs.linkFarm "mcp-servers" [
-          {
-            name = "bin/mcp-setup";
-            path = "${packages.mcp-setup}/bin/mcp-setup";
-          }
-        ];
+        packages.default = mcp-setup;
       };
 
       flake = {
