@@ -21,11 +21,21 @@
             name = "Local FileSystem";
             type = "filesystem";
             command = "npx";
-            extraArgs = ["-y" "@modelcontextprotocol/server-filesystem"];
+            args = ["-y" "@modelcontextprotocol/server-filesystem"];
             paths = [
               "/home/user/Documents"
               "/home/user/Projects"
             ];
+          };
+          github = {
+            enable = true;
+            name = "GitHub Access";
+            type = "github";
+            command = "npx";
+            args = ["-y" "@modelcontextprotocol/server-github"];
+            env = {
+              "GITHUB_PERSONAL_ACCESS_TOKEN" = "ghp_123456789abcdef";
+            };
           };
         }
       '';
@@ -40,7 +50,7 @@
           claude_desktop = {
             enable = true;
             clientType = "claude_desktop";
-            servers = ["filesystem"];
+            servers = ["filesystem" "github"];
           };
         }
       '';

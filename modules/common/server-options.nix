@@ -14,57 +14,67 @@
     };
 
     type = lib.mkOption {
-      type = lib.types.enum ["filesystem"];
-      default = name;
+      type = lib.types.enum ["filesystem" "github"];
+      default = "filesystem";
       description = ''
         Type of MCP server. Currently supports:
         - filesystem: Access to local files and directories
+        - github: Access to GitHub repositories
       '';
       example = "filesystem";
-    };
-
-    baseUrl = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
-      description = ''
-        Base URL for the API (optional). For filesystem type, this is not used
-        and can be left as null.
-      '';
-      example = "http://localhost:8000/api";
-    };
-
-    paths = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = ''
-        List of filesystem paths that the MCP server is allowed to access.
-        These should be absolute paths to directories you want to grant access to.
-        The AI client will only be able to read/write files within these directories.
-      '';
-      example = [
-        "/home/user/Documents"
-        "/home/user/Projects"
-      ];
     };
 
     command = lib.mkOption {
       type = lib.types.str;
       default = "npx";
       description = ''
-        Command to run the MCP server. For the Node.js implementation, use "npx".
-        For the Go implementation, specify the full path to the binary.
+        Command to run the MCP server. Usually "npx" for Node.js implementations
+        or the full path to a binary for compiled implementations.
       '';
       example = "npx";
     };
 
-    extraArgs = lib.mkOption {
+    args = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = ["-y" "@modelcontextprotocol/server-filesystem"];
+      default = [];
       description = ''
-        Additional arguments to pass to the MCP server command.
-        For the default npx command, these normally include the package name.
+        Arguments to pass to the MCP server command.
+        For filesystem servers, this includes the package name followed by the
+        directories you want to allow access to.
       '';
-      example = ["-y" "@modelcontextprotocol/server-filesystem"];
+      example = [
+        "-y"
+        "@modelcontextprotocol/server-filesystem"
+        "/home/user/Documents"
+        "/home/user/Projects"
+      ];
+    };
+
+    env = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = ''
+        Environment variables to set when running the MCP server.
+        Useful for providing API keys or other configuration to the server.
+      '';
+      example = {
+        "GITHUB_PERSONAL_ACCESS_TOKEN" = "ghp_123456789abcdef";
+      };
+    };
+
+    # Provide some backwards compatibility and convenience
+    paths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = ''
+        Convenience option for filesystem paths. These will be added to the args.
+        For filesystem servers, these are the directories you want to allow access to.
+        If you need more control, use the 'args' option directly.
+      '';
+      example = [
+        "/home/user/Documents"
+        "/home/user/Projects"
+      ];
     };
   };
 }

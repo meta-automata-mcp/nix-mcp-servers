@@ -3,12 +3,8 @@
   # List of supported server types
   supportedTypes = [
     "filesystem"
+    "github"
   ];
-
-  # Default base URLs for known services
-  defaultBaseUrls = {
-    filesystem = null; # FileSystem doesn't need a base URL
-  };
 
   # Format server configuration for the Claude desktop client
   formatForClient = {
@@ -16,18 +12,46 @@
     clientType,
   }:
     if clientType == "claude_desktop"
-    then {
-      # For filesystem type, create the server configuration for Claude Desktop
-      command = server.command or "npx";
-      args =
-        (server.extraArgs or ["-y" "@modelcontextprotocol/server-filesystem"])
-        ++ (server.paths or []);
-    }
-    else {
-      # Generic format (fallback only)
-      command = server.command or "npx";
-      args =
-        (server.extraArgs or ["-y" "@modelcontextprotocol/server-filesystem"])
-        ++ (server.paths or []);
-    };
+    then
+      # Format according to MCP standards with command, args, and env
+      {
+        command = server.command;
+        args =
+          if server.type == "filesystem" && server.paths != []
+          then
+            # Add default args for filesystem server if not already specified
+            (
+              if server.args == []
+              then ["-y" "@modelcontextprotocol/server-filesystem"]
+              else server.args
+            )
+            ++ server.paths
+          else server.args;
+      }
+      // (
+        if server.env != {}
+        then {env = server.env;}
+        else {}
+      )
+    else
+      # Generic fallback format
+      {
+        command = server.command;
+        args =
+          if server.type == "filesystem" && server.paths != []
+          then
+            # Add default args for filesystem server if not already specified
+            (
+              if server.args == []
+              then ["-y" "@modelcontextprotocol/server-filesystem"]
+              else server.args
+            )
+            ++ server.paths
+          else server.args;
+      }
+      // (
+        if server.env != {}
+        then {env = server.env;}
+        else {}
+      );
 }
