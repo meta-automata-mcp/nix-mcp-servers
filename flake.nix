@@ -36,137 +36,113 @@
           echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
         '';
 
-        # Documentation generation following home-manager pattern
-        packages = rec {
-          mcp-setup = pkgs.writeShellScriptBin "mcp-setup" ''
-            echo "MCP Setup CLI"
-            echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
-          '';
+        # A simpler documentation approach
+        packages.docs = pkgs.runCommand "mcp-servers-docs" {} ''
+          mkdir -p $out
 
-          # Load all modules to get documentation
-          eval = pkgs.lib.evalModules {
-            modules = [
-              {imports = [./modules/common];}
-            ];
-            specialArgs = {inherit pkgs;};
-          };
+          # Copy the module files for reference
+          mkdir -p $out/modules/common
+          cp ${./modules/common/options.nix} $out/modules/common/
+          cp ${./modules/common/client-options.nix} $out/modules/common/
+          cp ${./modules/common/server-options.nix} $out/modules/common/
+          cp ${./modules/common/default.nix} $out/modules/common/
 
-          # Options documentation in different formats
-          optionsMD = pkgs.nixosOptionsDoc {
-            options = eval.options;
-            transformOptions = opt:
-              opt
-              // {
-                declarations = map (d: d.outPath) (opt.declarations or []);
+          # Create a README
+          cat > $out/README.md << EOF
+          # MCP Servers Documentation
+
+          This documentation provides information about the available configuration options
+          for MCP servers and clients.
+
+          ## Available Options
+
+          The module defines the following main option paths:
+
+          - \`services.mcp-clients.enable\`: Enable MCP client configuration
+          - \`services.mcp-clients.stateDir\`: Directory to store client state
+          - \`services.mcp-clients.servers\`: Server configurations
+          - \`services.mcp-clients.clients\`: Client configurations
+
+          ## Module Source Files
+
+          The module options are defined in the following files:
+
+          - [options.nix](modules/common/options.nix): Main option definitions
+          - [client-options.nix](modules/common/client-options.nix): Client options
+          - [server-options.nix](modules/common/server-options.nix): Server options
+
+          ## Example Configuration
+
+          \`\`\`nix
+          {
+            services.mcp-clients = {
+              enable = true;
+              stateDir = "~/.local/state/mcp-setup";
+
+              servers.filesystem = {
+                enable = true;
+                name = "Local FileSystem";
+                type = "filesystem";
+                path = "/path/to/models";
+                credentials.apiKey = "not-needed";
               };
-          };
 
-          optionsJSON =
-            (pkgs.nixosOptionsDoc {
-              options = eval.options;
-              transformOptions = opt:
-                opt
-                // {
-                  declarations = map (d: d.outPath) (opt.declarations or []);
-                };
-              json = true;
-            })
-            .optionsJSON;
+              clients.claude_desktop = {
+                enable = true;
+                clientType = "claude_desktop";
+                servers = [ "filesystem" ];
+              };
+            };
+          }
+          \`\`\`
+          EOF
 
-          # Generate HTML manual
-          docs =
-            pkgs.runCommand "mcp-servers-manual" {
-              nativeBuildInputs = [pkgs.buildPackages.pandoc];
-            } ''
-              # Create output directories
-              mkdir -p $out/share/doc/mcp-servers
+          # Create an index.html that displays the README
+          cat > $out/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>MCP Servers Documentation</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body { font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+              h1, h2, h3 { color: #333; }
+              code { background: #f4f4f4; padding: 2px 4px; border-radius: 3px; }
+              pre { background: #f4f4f4; padding: 10px; border-radius: 3px; overflow-x: auto; }
+              a { color: #0366d6; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <div id="content">Loading...</div>
 
-              # Copy the options documentation
-              cp ${optionsMD.optionsCommonMark} $out/share/doc/mcp-servers/options.md
-              cp ${optionsJSON} $out/share/doc/mcp-servers/options.json
+            <script>
+              // Fetch README and convert to HTML
+              fetch('README.md')
+                .then(response => response.text())
+                .then(text => {
+                  // Very simple Markdown to HTML conversion
+                  const html = text
+                    .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+                    .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+                    .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+                    .replace(/\`\`\`(.*?)\n([\s\S]*?)\`\`\`/gm, '<pre><code>$2</code></pre>')
+                    .replace(/\`([^\`]+)\`/g, '<code>$1</code>')
+                    .replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
+                    .replace(/^- (.*?)$/gm, '<li>$1</li>')
+                    .replace(/(<li>.*?<\/li>\n)+/g, '<ul>$&</ul>');
 
-              # Copy static documentation files
-              cp -r ${./docs}/* $out/share/doc/mcp-servers/
-
-              # Copy module files for reference
-              mkdir -p $out/share/doc/mcp-servers/modules
-              cp -r ${./modules/common}/*.nix $out/share/doc/mcp-servers/modules/
-
-              # Create an index HTML file that can browse the documentation
-              cat > $out/share/doc/mcp-servers/index.html << EOF
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="utf-8">
-                <title>MCP Servers Documentation</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <style>
-                  body {
-                    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                    max-width: 1200px;
-                    margin: 0 auto;
-                    padding: 20px;
-                    line-height: 1.6;
-                    color: #333;
-                  }
-                  h1, h2, h3 { color: #2462c2; }
-                  h1 { border-bottom: 1px solid #eee; padding-bottom: 0.3em; }
-                  code { background: #f6f8fa; padding: 2px 4px; border-radius: 3px; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
-                  pre { background: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; }
-                  a { color: #0366d6; text-decoration: none; }
-                  a:hover { text-decoration: underline; }
-                  .option-path { font-weight: bold; background-color: #f0f7ff; border-left: 3px solid #2462c2; padding: 8px 12px; margin: 20px 0 10px 0; }
-                  .option-type { color: #6a737d; font-style: italic; }
-                  .option-default { background-color: #f6f8fa; padding: 8px; border-radius: 3px; margin-top: 5px; }
-                  .option-description { margin-top: 10px; }
-                  details { margin: 10px 0; }
-                  summary { cursor: pointer; }
-                  nav { background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-                  nav ul { list-style-type: none; padding: 0; margin: 0; }
-                  nav li { margin-bottom: 8px; }
-                </style>
-              </head>
-              <body>
-                <h1>MCP Servers Documentation</h1>
-
-                <nav>
-                  <h2>Contents</h2>
-                  <ul>
-                    <li><a href="README.md">Introduction</a></li>
-                    <li><a href="options.md">Configuration Options</a></li>
-                    <li><a href="RELEASE_NOTES.md">Release Notes</a></li>
-                  </ul>
-                </nav>
-
-                <div id="intro">
-                  <h2>Introduction</h2>
-                  <p>This documentation provides information about all configuration options for the MCP servers and clients.</p>
-                  <p>These modules allow you to configure various model serving setups across different platforms.</p>
-                  <p><a href="README.md">Read the full introduction</a></p>
-                </div>
-
-                <div id="main-content">
-                  <p>Select a section from the navigation menu to view documentation.</p>
-
-                  <h2>Configuration Options</h2>
-                  <p>The <a href="options.md">options documentation</a> provides a complete reference of all available configuration options.</p>
-
-                  <h2>Getting Started</h2>
-                  <p>See the <a href="README.md">introduction</a> for installation and basic configuration instructions.</p>
-                </div>
-              </body>
-              </html>
-              EOF
-
-              # Create a manpage for the main configuration options
-              mkdir -p $out/share/man/man5
-              pandoc --standalone --to man ${optionsMD.optionsCommonMark} \
-                -o $out/share/man/man5/mcp-servers-configuration.5
-            '';
-
-          # Main documentation output
-          default = docs;
-        };
+                  document.getElementById('content').innerHTML = html;
+                })
+                .catch(error => {
+                  document.getElementById('content').innerHTML = 'Error loading documentation: ' + error;
+                });
+            </script>
+          </body>
+          </html>
+          EOF
+        '';
       };
 
       flake = {
