@@ -1,7 +1,0 @@
-origin: aloshy-ai/nix-mcp-servers
-
-statements:
-  - subjects:
-      - repo:${origin}:ref:refs/heads/main
-    permissions:
-      contents: write
