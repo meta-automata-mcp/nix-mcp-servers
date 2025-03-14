@@ -18,9 +18,6 @@ jobs:
       with:
         visibility: public
         build-docs: true
-      permissions:
-        id-token: write
-        contents: write
-        pages: write
+      permissions: write-all
       secrets:
         cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
