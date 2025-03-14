@@ -17,6 +17,7 @@ jobs:
       uses: aloshy-ai/ci/.github/workflows/workflow.yml@main
       with:
         visibility: public
+        build-docs: true
       permissions:
         id-token: write
         contents: write
