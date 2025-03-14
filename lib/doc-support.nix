@@ -20,6 +20,7 @@
       moduleRootPaths = [./..];
       mkModuleUrl = path: "https://github.com/aloshy-ai/nix-mcp-servers/blob/main/${path}";
       channelName = "mcp-servers";
+      id = "mcp-servers-options";
     };
 
   # Create a DocBook XML file from the options
