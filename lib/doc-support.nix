@@ -10,15 +10,8 @@
   # Add NMD to the package set - import the builders.nix file specifically
   nmd = import (nmdSrc + "/builders.nix") {inherit lib pkgs;};
 
-  # Helper functions for documentation
-  mkOptionsList = pkgs.callPackage (nmdSrc + "/lib/options-to-docbook.nix") {};
-
-  # Custom evaluator for modules
-  evalModules = modules:
-    lib.evalModules {
-      inherit modules;
-      specialArgs = {inherit pkgs;};
-    };
+  # We need to directly use the modules-docbook.nix file for creating options XML
+  modulesDocBook = import (nmdSrc + "/lib/modules-docbook.nix") {inherit lib pkgs;};
 
   # Generate documentation for a set of modules
   buildModulesDocs = modules:
@@ -27,6 +20,19 @@
       moduleRootPaths = [./..];
       mkModuleUrl = path: "https://github.com/aloshy-ai/nix-mcp-servers/blob/main/${path}";
       channelName = "mcp-servers";
+    };
+
+  # Create a DocBook XML file from the options
+  mkOptionsList = options:
+    modulesDocBook {
+      inherit options;
+      transformOptions = opt:
+        opt
+        // {
+          declarations = map (d: d.outPath) (opt.declarations or []);
+        };
+      # For DocBook output
+      id = "mcp-servers-options";
     };
 
   # Build a documentation site using DocBook
@@ -54,7 +60,6 @@ in {
   inherit
     nmd
     mkOptionsList
-    evalModules
     buildModulesDocs
     buildDocBookDocs
     ;
