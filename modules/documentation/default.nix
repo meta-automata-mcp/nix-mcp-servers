@@ -1,11 +1,11 @@
-{ pkgs, lib, ... }:
-
 {
-  # This is a simplified approach that doesn't require module evaluation
-  system.build.manualHTML = pkgs.callPackage ./manual.nix {
-    # Basic options to pass
-    options = {};
-    revision = "main";
-    version = "0.1.0";
+  pkgs,
+  lib,
+  ...
+}: {
+  # Build the manual using our dynamic options-doc module
+  system.build.manualHTML = pkgs.callPackage ./options-doc.nix {
+    inherit lib;
+    # Version will be dynamically determined
   };
 }
