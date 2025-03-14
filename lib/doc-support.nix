@@ -35,11 +35,10 @@
     docBook,
   }:
     nmd.buildDocBookDocs {
-      inherit docBook;
+      inherit modulesDocs;
       pathName = "mcp-servers";
       projectName = "MCP Servers";
-      modulesDocs = modulesDocs;
-      documentsDirectory = ./.;
+      documentsDirectory = docBook;
       documentType = "book";
       chunkToc = ''
         <toc>
