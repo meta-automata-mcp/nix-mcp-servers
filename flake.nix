@@ -35,10 +35,10 @@
           echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
         '';
         
-        # Simple manual builder
-        manualHTML = pkgs.callPackage ./modules/documentation/manual.nix {
-          options = {};
-          revision = self.rev or "main";
+        # Manual builder from our options-doc module
+        manualHTML = pkgs.callPackage ./modules/documentation/options-doc.nix {
+          lib = pkgs.lib;
+          revision = self.rev or "main"; 
           version = "0.1.0";
         };
       in {
