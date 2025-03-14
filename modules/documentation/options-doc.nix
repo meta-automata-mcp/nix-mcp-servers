@@ -58,7 +58,7 @@ with pkgs; let
               <h3>Server Options</h3>
 
               <div>
-                <h4><code>services.mcp-clients.servers.&lt;name&gt;.enable</code></h4>
+                <h4><code>services.mcpServers.servers.&lt;name&gt;.enable</code></h4>
                 <p>Enable or disable this MCP server configuration.</p>
                 <details>
                   <summary>Details</summary>
@@ -71,7 +71,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.servers.&lt;name&gt;.command</code></h4>
+                <h4><code>services.mcpServers.servers.&lt;name&gt;.command</code></h4>
                 <p>Command to run the MCP server.</p>
                 <details>
                   <summary>Details</summary>
@@ -84,7 +84,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.servers.&lt;name&gt;.env</code></h4>
+                <h4><code>services.mcpServers.servers.&lt;name&gt;.env</code></h4>
                 <p>Environment variables to set when running the server.</p>
                 <details>
                   <summary>Details</summary>
@@ -97,7 +97,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.servers.&lt;name&gt;.type</code></h4>
+                <h4><code>services.mcpServers.servers.&lt;name&gt;.type</code></h4>
                 <p>Type of MCP server.</p>
                 <details>
                   <summary>Details</summary>
@@ -113,7 +113,7 @@ with pkgs; let
               <h3>Client Options</h3>
 
               <div>
-                <h4><code>services.mcp-clients.clients.&lt;name&gt;.enable</code></h4>
+                <h4><code>services.mcpServers.clients.&lt;name&gt;.enable</code></h4>
                 <p>Whether to enable this MCP client configuration.</p>
                 <details>
                   <summary>Details</summary>
@@ -126,7 +126,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.clients.&lt;name&gt;.clientType</code></h4>
+                <h4><code>services.mcpServers.clients.&lt;name&gt;.clientType</code></h4>
                 <p>Type of MCP client to configure.</p>
                 <details>
                   <summary>Details</summary>
@@ -139,7 +139,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.clients.&lt;name&gt;.configPath</code></h4>
+                <h4><code>services.mcpServers.clients.&lt;name&gt;.configPath</code></h4>
                 <p>Path to the client configuration file. If not specified, a default path will be used.</p>
                 <details>
                   <summary>Details</summary>
@@ -152,7 +152,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.clients.&lt;name&gt;.servers</code></h4>
+                <h4><code>services.mcpServers.clients.&lt;name&gt;.servers</code></h4>
                 <p>List of MCP server names to enable for this client.</p>
                 <details>
                   <summary>Details</summary>
@@ -169,7 +169,7 @@ with pkgs; let
               <h3>Filesystem Server Options</h3>
 
               <div>
-                <h4><code>services.mcp-clients.servers.&lt;name&gt;.filesystem.args</code></h4>
+                <h4><code>services.mcpServers.servers.&lt;name&gt;.filesystem.args</code></h4>
                 <p>Default arguments for the filesystem MCP server.</p>
                 <details>
                   <summary>Details</summary>
@@ -181,7 +181,7 @@ with pkgs; let
               </div>
 
               <div>
-                <h4><code>services.mcp-clients.servers.&lt;name&gt;.filesystem.extraArgs</code></h4>
+                <h4><code>services.mcpServers.servers.&lt;name&gt;.filesystem.extraArgs</code></h4>
                 <p>Directories to provide access to.</p>
                 <details>
                   <summary>Details</summary>
@@ -197,7 +197,7 @@ with pkgs; let
           <section>
             <h2>Example Configuration</h2>
             <pre><code>{
-        services.mcp-clients = {
+        services.mcpServers = {
           enable = true;
 
           servers.filesystem = {

@@ -5,7 +5,7 @@
   pkgs,
   ...
 }: let
-  cfg = config.services.mcp-clients;
+  cfg = config.services.mcpServers;
 
   # Check if any server is using npx command
   hasNpxServer =
@@ -24,6 +24,6 @@ in {
       ];
 
     # Use system state directory
-    services.mcp-clients.stateDir = lib.mkDefault "/var/lib/mcp-servers";
+    services.mcpServers.stateDir = lib.mkDefault "/var/lib/mcp-servers";
   };
 }

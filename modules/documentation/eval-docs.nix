@@ -1,9 +1,13 @@
 # modules/documentation/eval-docs.nix
-{ system, pkgs, mcpLib, revision, version }:
-
-let
+{
+  system,
+  pkgs,
+  mcpLib,
+  revision,
+  version,
+}: let
   localPkgs = pkgs;
-  
+
   # Create minimal module evaluation
   eval = localPkgs.lib.evalModules {
     modules = [
@@ -14,20 +18,20 @@ let
           ../common/server-options.nix
           ../common/client-options.nix
         ];
-        
+
         # Set required configuration values
-        services.mcp-clients = {
+        services.mcpServers = {
           enable = true;
           version = version;
           revision = revision;
         };
         documentation.enable = true;
-        
+
         # Set the system type
         nixpkgs.system = system;
       }
     ];
-    
+
     # Pass required special arguments
     specialArgs = {
       modulesPath = builtins.toString ../..;
@@ -35,7 +39,6 @@ let
       lib = localPkgs.lib;
     };
   };
-
 in
   # Return the documentation derivations
   eval.config.system.build.manual
