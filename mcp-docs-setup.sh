@@ -60,6 +60,8 @@ in {
 }
 EOF
 
+echo "Created modules/documentation/default.nix"
+
 # Create the options documentation generator
 cat > modules/documentation/options-doc.nix << 'EOF'
 # modules/documentation/options-doc.nix
@@ -157,6 +159,8 @@ in rec {
 }
 EOF
 
+echo "Created modules/documentation/options-doc.nix"
+
 # Create the manual markdown template
 cat > modules/documentation/manual.md << 'EOF'
 # MCP Server Configuration Options {#book-mcp-manual}
@@ -185,6 +189,8 @@ source: @MCP_OPTIONS_JSON@
 ```
 EOF
 
+echo "Created modules/documentation/manual.md"
+
 # Create the redirects configuration
 cat > modules/documentation/redirects.json << 'EOF'
 {
@@ -193,6 +199,8 @@ cat > modules/documentation/redirects.json << 'EOF'
   ]
 }
 EOF
+
+echo "Created modules/documentation/redirects.json"
 
 # Create the documentation evaluation helper
 cat > modules/documentation/eval-docs.nix << 'EOF'
@@ -236,6 +244,8 @@ in
   eval.config.system.build.manual
 EOF
 
+echo "Created modules/documentation/eval-docs.nix"
+
 # Create the module list file
 cat > modules/module-list.nix << 'EOF'
 # modules/module-list.nix
@@ -251,6 +261,8 @@ cat > modules/module-list.nix << 'EOF'
   ./documentation
 ]
 EOF
+
+echo "Created modules/module-list.nix"
 
 section "Updating flake.nix"
 
@@ -292,6 +304,8 @@ sed -i.temp '
 }
 ' flake.nix
 
+echo "Updated flake.nix"
+
 section "Updating CI configuration"
 
 # Update the CI workflow to enable documentation generation
@@ -308,6 +322,8 @@ if [ -f ".github/workflows/ci.yml" ]; then
   
   # Remove temporary files
   rm .github/workflows/ci.yml.temp
+  
+  echo "Updated .github/workflows/ci.yml"
 else
   echo "Warning: CI configuration file not found at .github/workflows/ci.yml"
   echo "You will need to manually update the CI configuration to enable documentation generation."
@@ -315,6 +331,13 @@ fi
 
 # Clean up temporary files
 rm flake.nix.temp
+
+section "Verifying created files"
+echo "Listing all documentation files:"
+ls -la modules/documentation/
+echo
+echo "Listing module list file:"
+ls -la modules/module-list.nix
 
 section "Setup complete"
 echo "Documentation generation has been set up successfully."
