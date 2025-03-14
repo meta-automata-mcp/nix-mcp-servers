@@ -34,12 +34,22 @@
           echo "MCP Setup CLI"
           echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
         '';
+        
+        # Simple manual builder
+        manualHTML = pkgs.callPackage ./modules/documentation/manual.nix {
+          options = {};
+          revision = self.rev or "main";
+          version = "0.1.0";
+        };
       in {
         # CLI tool package
         packages.mcp-setup = mcp-setup;
 
         # Set the default package
         packages.default = mcp-setup;
+        
+        # Documentation output
+        packages.manualHTML = manualHTML;
       };
 
       flake = {
