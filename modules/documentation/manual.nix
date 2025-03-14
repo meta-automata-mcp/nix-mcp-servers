@@ -9,9 +9,9 @@ let
     }
     ''
       # Create a simple HTML manual
-      mkdir -p $out/share/doc/mcp
+      mkdir -p $out
       
-      cat > $out/share/doc/mcp/index.html << 'INNEREOF'
+      cat > $out/index.html << 'INNEREOF'
 <!DOCTYPE html>
 <html>
 <head>
@@ -28,7 +28,7 @@ let
   <h1>MCP Server Configuration Manual</h1>
   <h2>Version ${version}</h2>
   
-  <p>This is a placeholder for the MCP Servers Configuration Manual.</p>
+  <p>This is the MCP Servers Configuration Manual.</p>
   
   <h2>Introduction</h2>
   <p>The MCP Flake provides declarative configuration for Model Control Protocol servers and clients.</p>
@@ -50,7 +50,7 @@ INNEREOF
       
       # Add metadata for CI
       mkdir -p $out/nix-support
-      echo "doc manual $out/share/doc/mcp" >> $out/nix-support/hydra-build-products
+      echo "doc manual $out" >> $out/nix-support/hydra-build-products
     '';
 
 in manualHTML
