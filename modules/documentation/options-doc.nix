@@ -56,7 +56,7 @@ with pkgs; let
   # Build a static manual using the generated HTML
   manualHTML =
     runCommand "mcp-manual-html" {
-      nativeBuildInputs = with pkgs; [coreutils];
+      nativeBuildInputs = with pkgs; [coreutils gnused];
       meta.description = "The MCP Servers Configuration Manual";
     } ''
             # Create output structure
@@ -66,6 +66,9 @@ with pkgs; let
             cat > $out/index.html << 'INNEREOF'
       ${htmlContent}
       INNEREOF
+
+            # Fix any remaining <n> placeholders to <name>
+            sed -i "s/<n>/<name>/g" $out/index.html
     '';
 in
   manualHTML
