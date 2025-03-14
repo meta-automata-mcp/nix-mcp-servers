@@ -24,6 +24,6 @@ in {
       ];
 
     # Use system state directory
-    services.mcp-clients.stateDir = lib.mkDefault "/var/lib/mcp-setup";
+    services.mcp-clients.stateDir = lib.mkDefault "/var/lib/mcp-servers";
   };
 }

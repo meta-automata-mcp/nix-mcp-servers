@@ -181,7 +181,7 @@ Add to your darwin-configuration.nix:
 
 ## CLI Tool
 
-The package also provides a `mcp-setup` CLI tool to help configure your MCP servers:
+The package also provides a `mcp-servers` CLI tool to help configure your MCP servers:
 
 ```bash
 nix run github:aloshy-ai/nix-mcp-servers

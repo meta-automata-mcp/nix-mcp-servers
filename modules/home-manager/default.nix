@@ -24,6 +24,6 @@ in {
       ];
 
     # Use home directory for state
-    services.mcp-clients.stateDir = lib.mkDefault "~/.local/state/mcp-setup";
+    services.mcp-clients.stateDir = lib.mkDefault "~/.local/state/mcp-servers";
   };
 }
