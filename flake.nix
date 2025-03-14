@@ -38,10 +38,13 @@
 
         # Documentation generation
         packages.docs = let
+          # Import the modules directly
+          commonModule = import ./modules/common {inherit (pkgs) lib;};
+
           # Evaluate modules to extract options
           eval = pkgs.lib.evalModules {
             modules = [
-              {imports = [./modules/common];}
+              commonModule
             ];
             specialArgs = {inherit pkgs;};
           };
@@ -108,7 +111,7 @@
                 <ul>
                   <li><a href="#intro">Introduction</a></li>
                   <li><a href="#options">Configuration Options</a></li>
-                  <li><a href="default.xml">XML Documentation</a> (if available)</li>
+                  <li><a href="RELEASE_NOTES.md">Release Notes</a></li>
                 </ul>
               </nav>
 
@@ -169,6 +172,10 @@
             </body>
             </html>
             EOF
+
+            # Also copy the module source files for reference
+            mkdir -p $out/modules
+            cp -r ${./modules/common}/*.nix $out/modules/
           '';
       };
 
