@@ -10,7 +10,7 @@
         User-friendly name for this server. This will be displayed in client
         interfaces when connecting to the server.
       '';
-      example = "Local Claude Models";
+      example = "Local Filesystem Access";
     };
 
     type = lib.mkOption {
@@ -18,7 +18,7 @@
       default = name;
       description = ''
         Type of MCP server. Currently supports:
-        - filesystem: Local filesystem-based models
+        - filesystem: Access to local files and directories
       '';
       example = "filesystem";
     };
@@ -33,31 +33,38 @@
       example = "http://localhost:8000/api";
     };
 
-    path = lib.mkOption {
-      type = lib.types.nullOr lib.types.str;
-      default = null;
+    paths = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
       description = ''
-        File system path for filesystem server type. This should point to a
-        directory containing model files or a specific model file. Required
-        when using the filesystem server type.
+        List of filesystem paths that the MCP server is allowed to access.
+        These should be absolute paths to directories you want to grant access to.
+        The AI client will only be able to read/write files within these directories.
       '';
-      example = "/home/user/models/llama3";
+      example = [
+        "/home/user/Documents"
+        "/home/user/Projects"
+      ];
     };
 
-    credentials = lib.mkOption {
-      type = lib.types.submodule {
-        options = {
-          apiKey = lib.mkOption {
-            type = lib.types.str;
-            description = ''
-              API key for authentication. For filesystem type, this is required
-              by the schema but not functionally used - any string can be provided.
-            '';
-            example = "sk-1234567890";
-          };
-        };
-      };
-      description = "Authentication credentials for this MCP server";
+    command = lib.mkOption {
+      type = lib.types.str;
+      default = "npx";
+      description = ''
+        Command to run the MCP server. For the Node.js implementation, use "npx".
+        For the Go implementation, specify the full path to the binary.
+      '';
+      example = "npx";
+    };
+
+    extraArgs = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = ["-y" "@modelcontextprotocol/server-filesystem"];
+      description = ''
+        Additional arguments to pass to the MCP server command.
+        For the default npx command, these normally include the package name.
+      '';
+      example = ["-y" "@modelcontextprotocol/server-filesystem"];
     };
   };
 }

@@ -20,8 +20,12 @@
             enable = true;
             name = "Local FileSystem";
             type = "filesystem";
-            path = "/path/to/models";
-            credentials.apiKey = "not-needed";
+            command = "npx";
+            extraArgs = ["-y" "@modelcontextprotocol/server-filesystem"];
+            paths = [
+              "/home/user/Documents"
+              "/home/user/Projects"
+            ];
           };
         }
       '';
@@ -36,6 +40,7 @@
           claude_desktop = {
             enable = true;
             clientType = "claude_desktop";
+            servers = ["filesystem"];
           };
         }
       '';

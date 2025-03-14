@@ -15,14 +15,14 @@ in {
     then
       {
         # macOS paths
-        "claude_desktop" = "~/Library/Application Support/Claude/mcp-config.json";
+        "claude_desktop" = "~/Library/Application Support/Claude/claude_desktop_config.json";
       }
       .${clientType}
       or "${configBase}/mcp/${clientType}-config.json"
     else
       {
         # Linux paths
-        "claude_desktop" = "${configBase}/claude-desktop/mcp-config.json";
+        "claude_desktop" = "${configBase}/Claude/claude_desktop_config.json";
       }
       .${clientType}
       or "${configBase}/mcp/${clientType}-config.json";
@@ -34,6 +34,8 @@ in {
   }:
     if clientType == "claude_desktop"
     then {
+      # Claude Desktop expects mcpServers with key as server name
+      # and value as the server configuration
       mcpServers = servers;
     }
     else {

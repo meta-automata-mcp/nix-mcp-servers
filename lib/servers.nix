@@ -10,32 +10,24 @@
     filesystem = null; # FileSystem doesn't need a base URL
   };
 
-  # Format server configuration for specific client types
+  # Format server configuration for the Claude desktop client
   formatForClient = {
     server,
     clientType,
   }:
     if clientType == "claude_desktop"
     then {
-      name = "${server.name} API";
-      type = server.type;
-      apiKey = server.credentials.apiKey;
-      baseUrl = server.baseUrl or lib.servers.defaultBaseUrls.${server.type} or null;
-      # For filesystem type, add path parameter for model directory
-      path =
-        if server.type == "filesystem"
-        then server.path or (throw "Path must be specified for filesystem server type")
-        else null;
+      # For filesystem type, create the server configuration for Claude Desktop
+      command = server.command or "npx";
+      args =
+        (server.extraArgs or ["-y" "@modelcontextprotocol/server-filesystem"])
+        ++ (server.paths or []);
     }
     else {
       # Generic format (fallback only)
-      name = server.name;
-      type = server.type;
-      apiKey = server.credentials.apiKey;
-      baseUrl = server.baseUrl or lib.servers.defaultBaseUrls.${server.type} or null;
-      path =
-        if server.type == "filesystem"
-        then server.path or (throw "Path must be specified for filesystem server type")
-        else null;
+      command = server.command or "npx";
+      args =
+        (server.extraArgs or ["-y" "@modelcontextprotocol/server-filesystem"])
+        ++ (server.paths or []);
     };
 }
