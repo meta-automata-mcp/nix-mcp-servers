@@ -7,73 +7,68 @@
 }: let
   # Simple documentation generation
   manualHTML =
-    pkgs.runCommand "mcp-manual-html"
-    {
+    pkgs.runCommand "mcp-manual-html" {
       nativeBuildInputs = with pkgs; [coreutils];
       meta.description = "The MCP Servers Configuration Manual";
-    }
-    ''
-            # Create a simple HTML manual
-            mkdir -p $out
+    } ''
+          # Create a simple HTML manual
+          mkdir -p $out
 
-            cat > $out/index.html << 'INNEREOF'
+          cat > $out/index.html << 'INNEREOF'
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light dark">
         <title>MCP Server Configuration Manual</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.min.css">
       </head>
       <body>
-        <nav class="blue darken-1">
-          <div class="nav-wrapper container">
-            <a href="#" class="brand-logo">MCP Manual</a>
-          </div>
-        </nav>
+        <header>
+          <hgroup>
+            <h1>MCP Server Configuration Manual</h1>
+            <h2>Version ${version}</h2>
+          </hgroup>
+        </header>
 
-        <div class="container">
-          <div class="section">
-            <h3 class="header">MCP Server Configuration Manual</h3>
-            <h5 class="grey-text">Version ${version}</h5>
+        <main>
+          <p>This is the MCP Servers Configuration Manual.</p>
 
-            <div class="divider"></div>
-
-            <p class="flow-text">This is the MCP Servers Configuration Manual.</p>
-
-            <h4>Introduction</h4>
+          <section>
+            <h2>Introduction</h2>
             <p>The MCP Flake provides declarative configuration for Model Control Protocol servers and clients.</p>
+          </section>
 
-            <h4>Features</h4>
-            <ul class="collection">
-              <li class="collection-item">Cross-platform support (NixOS, Darwin, home-manager)</li>
-              <li class="collection-item">Pure Nix expressions for maximum compatibility</li>
-              <li class="collection-item">Declarative configuration with support for secret management</li>
-              <li class="collection-item">Support for various MCP servers including filesystem and GitHub servers</li>
-              <li class="collection-item">Automatic generation of client configurations at appropriate OS-specific paths</li>
+          <section>
+            <h2>Features</h2>
+            <ul>
+              <li>Cross-platform support (NixOS, Darwin, home-manager)</li>
+              <li>Pure Nix expressions for maximum compatibility</li>
+              <li>Declarative configuration with support for secret management</li>
+              <li>Support for various MCP servers including filesystem and GitHub servers</li>
+              <li>Automatic generation of client configurations at appropriate OS-specific paths</li>
             </ul>
+          </section>
 
-            <h4>Configuration Options</h4>
-            <div class="card-panel light-blue lighten-5">
+          <section>
+            <h2>Configuration Options</h2>
+            <article>
               <p>A full reference will be generated in future versions. For now, please refer to the source code.</p>
-            </div>
-          </div>
-        </div>
+            </article>
+          </section>
+        </main>
 
-        <footer class="page-footer blue darken-1">
-          <div class="footer-copyright">
-            <div class="container">
-              MCP Server Configuration - Built with <a class="white-text" href="https://nixos.org/">Nix</a>
-            </div>
-          </div>
+        <footer>
+          <small>MCP Server Configuration - Built with <a href="https://nixos.org/">Nix</a></small>
         </footer>
       </body>
       </html>
       INNEREOF
 
-            # Add metadata for CI
-            mkdir -p $out/nix-support
-            echo "doc manual $out" >> $out/nix-support/hydra-build-products
+          # Add metadata for CI
+          mkdir -p $out/nix-support
+          echo "doc manual $out" >> $out/nix-support/hydra-build-products
     '';
 in
   manualHTML
