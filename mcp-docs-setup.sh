@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# MCP Documentation Setup Script
+# MCP Documentation Setup Script (macOS Compatible)
 # This script adds documentation generation to the nix-mcp-servers repository
 
 # Print section header
@@ -267,19 +267,11 @@ echo "Created modules/module-list.nix"
 section "Updating flake.nix"
 
 # Update flake.nix to include documentation outputs
-# This uses sed to add the documentation-related code to the perSystem section
 # First, we'll back up the original flake.nix
 cp flake.nix flake.nix.bak
 
-# Add documentation generation to flake.nix
-# We'll insert the documentation code after the mcp-setup definition
-sed -i.temp '
-/mcp-setup = pkgs.writeShellScriptBin/,/};/ {
-  /};/ {
-    r /dev/stdin
-    }
-}
-' flake.nix << 'EOD'
+# For macOS compatibility, create temp file with documentation content
+cat > doc_block.txt << 'EOD'
         
         # Build the manual
         documentation = import ./modules/documentation/eval-docs.nix {
@@ -290,19 +282,39 @@ sed -i.temp '
         };
 EOD
 
-# Then add the documentation packages to the packages output
-sed -i.temp '
-/packages.default = mcp-setup;/ {
-  a \
-        # Documentation packages\
-        packages.manualHTML = documentation.manualHTML;\
-        packages.optionsJSON = documentation.optionsJSON;\
-        packages.documentation = documentation;\
-        \
-        # Add documentation to checks\
+# Create temp file with packages content
+cat > packages_block.txt << 'EOD'
+        # Documentation packages
+        packages.manualHTML = documentation.manualHTML;
+        packages.optionsJSON = documentation.optionsJSON;
+        packages.documentation = documentation;
+        
+        # Add documentation to checks
         checks.manualHTML = documentation.manualHTML;
+EOD
+
+# Use awk for more reliable text insertion in macOS
+awk '
+/mcp-setup = pkgs.writeShellScriptBin/,/};/ {
+  print $0;
+  if ($0 ~ /};/) {
+    system("cat doc_block.txt");
+  }
+  next;
 }
-' flake.nix
+/packages.default = mcp-setup;/ {
+  print $0;
+  system("cat packages_block.txt");
+  next;
+}
+{ print $0; }
+' flake.nix > flake.nix.new
+
+# Replace original with new file
+mv flake.nix.new flake.nix
+
+# Clean up temp files
+rm doc_block.txt packages_block.txt
 
 echo "Updated flake.nix"
 
@@ -313,24 +325,31 @@ if [ -f ".github/workflows/ci.yml" ]; then
   # Backup the original CI configuration
   cp .github/workflows/ci.yml .github/workflows/ci.yml.bak
   
-  # Update the CI configuration to enable documentation generation
+  # For macOS compatibility, use multiple simple sed commands
   sed -i.temp 's/build-docs: false/build-docs: true/' .github/workflows/ci.yml
   
-  # Add the docs-package parameter
-  # Find the line with "visibility: public" and add the docs-package parameter after it
-  sed -i.temp '/visibility: public/ a\        docs-package: "manualHTML"' .github/workflows/ci.yml
+  # Create a temporary file with the new line
+  echo '        docs-package: "manualHTML"' > docs_package_line.txt
   
-  # Remove temporary files
-  rm .github/workflows/ci.yml.temp
+  # Use awk to insert the new line after "visibility: public"
+  awk '{
+    print $0;
+    if ($0 ~ /visibility: public/) {
+      system("cat docs_package_line.txt");
+    }
+  }' .github/workflows/ci.yml > .github/workflows/ci.yml.new
+  
+  # Replace original with new file
+  mv .github/workflows/ci.yml.new .github/workflows/ci.yml
+  
+  # Clean up temporary files
+  rm -f .github/workflows/ci.yml.temp docs_package_line.txt
   
   echo "Updated .github/workflows/ci.yml"
 else
   echo "Warning: CI configuration file not found at .github/workflows/ci.yml"
   echo "You will need to manually update the CI configuration to enable documentation generation."
 fi
-
-# Clean up temporary files
-rm flake.nix.temp
 
 section "Verifying created files"
 echo "Listing all documentation files:"
