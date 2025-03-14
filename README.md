@@ -11,9 +11,21 @@ A Nix flake for managing Model Control Protocol (MCP) server configurations acro
 
 ### Servers
 - **FileSystem**: Local filesystem-based models
+- **GitHub**: GitHub repository access for models
 
 ### Clients
 - **Claude Desktop**: Anthropic's Claude desktop application
+- **Cursor**: The Cursor AI-powered code editor
+
+## Project Overview
+
+This Nix flake provides a unified configuration system for Model Control Protocol (MCP) servers across different platforms and package managers. The project:
+
+- Manages MCP server configurations for AI applications
+- Handles client-specific configuration formats and paths
+- Works across NixOS, nix-darwin, and Home Manager
+- Provides cross-platform compatibility between Linux and macOS
+- Supports multiple server types with server-specific configuration options
 
 ## Installation & Usage
 
@@ -38,18 +50,36 @@ Add to your configuration.nix:
       modules = [
         mcp-servers.nixosModules.default
         {
-          services.mcp-clients = {
-            enable = true;
-            servers.local_models = {
-              enable = true;
-              name = "Local Models";
-              type = "filesystem";
-              path = "/path/to/models";
-              credentials.apiKey = "not-needed";
+          services.mcp-servers = {
+            enable = true; # Enable the entire module
+            
+            servers = {
+              filesystem = {
+                # command = "npx"; # Uses default
+                filesystem = {
+                  # args = [ "-y" "@modelcontextprotocol/server-filesystem" ]; # Uses default
+                  extraArgs = [ "/Users/username/Desktop" "/path/to/other/allowed/dir" ]; # REQUIRED
+                };
+              };
+              
+              github = {
+                env = {
+                  GITHUB_PERSONAL_ACCESS_TOKEN = "xxxxxxxxxxxxxxx"; # REQUIRED through assertion
+                };
+              };
             };
-            clients.claude = {
-              enable = true;
-              clientType = "claude_desktop";
+            
+            clients = {
+              claude = {
+                enable = true; # Using standard Nix 'enable' flag
+                # clientType defaults to "claudeDesktop" based on name
+                servers = [ "filesystem" "github" ];
+              };
+              
+              cursor = {
+                enable = true; # Enable Cursor configuration 
+                servers = [ "filesystem" ]; # Only use filesystem server for Cursor
+              };
             };
           };
         }
@@ -69,18 +99,36 @@ Add to your home.nix:
     (builtins.fetchTarball "https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz").nixosModules.home-manager
   ];
   
-  services.mcp-clients = {
-    enable = true;
-    servers.local_models = {
-      enable = true;
-      name = "Local Models";
-      type = "filesystem";
-      path = "/path/to/models";
-      credentials.apiKey = "not-needed";
+  services.mcp-servers = {
+    enable = true; # Enable the entire module
+    
+    servers = {
+      filesystem = {
+        # command = "npx"; # Uses default
+        filesystem = {
+          # args = [ "-y" "@modelcontextprotocol/server-filesystem" ]; # Uses default
+          extraArgs = [ "/Users/username/Desktop" "/path/to/other/allowed/dir" ]; # REQUIRED
+        };
+      };
+      
+      github = {
+        env = {
+          GITHUB_PERSONAL_ACCESS_TOKEN = "xxxxxxxxxxxxxxx"; # REQUIRED through assertion
+        };
+      };
     };
-    clients.claude = {
-      enable = true;
-      clientType = "claude_desktop";
+    
+    clients = {
+      claude = {
+        enable = true; # Using standard Nix 'enable' flag
+        # clientType defaults to "claudeDesktop" based on name
+        servers = [ "filesystem" "github" ];
+      };
+      
+      cursor = {
+        enable = true; # Enable Cursor configuration
+        servers = [ "filesystem" ]; # Only use filesystem server for Cursor
+      };
     };
   };
 }
@@ -96,18 +144,36 @@ Add to your darwin-configuration.nix:
     (builtins.fetchTarball "https://github.com/aloshy-ai/nix-mcp-servers/archive/main.tar.gz").darwinModules.default
   ];
   
-  services.mcp-clients = {
-    enable = true;
-    servers.local_models = {
-      enable = true;
-      name = "Local Models";
-      type = "filesystem";
-      path = "/path/to/models";
-      credentials.apiKey = "not-needed";
+  services.mcp-servers = {
+    enable = true; # Enable the entire module
+    
+    servers = {
+      filesystem = {
+        # command = "npx"; # Uses default
+        filesystem = {
+          # args = [ "-y" "@modelcontextprotocol/server-filesystem" ]; # Uses default
+          extraArgs = [ "/Users/username/Desktop" "/path/to/other/allowed/dir" ]; # REQUIRED
+        };
+      };
+      
+      github = {
+        env = {
+          GITHUB_PERSONAL_ACCESS_TOKEN = "xxxxxxxxxxxxxxx"; # REQUIRED through assertion
+        };
+      };
     };
-    clients.claude = {
-      enable = true;
-      clientType = "claude_desktop";
+    
+    clients = {
+      claude = {
+        enable = true; # Using standard Nix 'enable' flag
+        # clientType defaults to "claudeDesktop" based on name
+        servers = [ "filesystem" "github" ];
+      };
+      
+      cursor = {
+        enable = true; # Enable Cursor configuration
+        servers = [ "filesystem" ]; # Only use filesystem server for Cursor
+      };
     };
   };
 }
@@ -149,9 +215,41 @@ cat ~/Library/Application\ Support/Claude/mcp-config.json
 
 # For Claude Desktop on Linux
 cat ~/.config/claude-desktop/mcp-config.json
+
+# For Cursor on macOS
+cat ~/Library/Application\ Support/Cursor/mcp-config.json
+
+# For Cursor on Linux
+cat ~/.config/Cursor/mcp-config.json
 ```
 
-You should see a JSON configuration with your FileSystem server information.
+You should see a JSON configuration with your configured server information.
+
+## Module Structure
+
+This project uses a modular structure for handling configuration across different platforms:
+
+- **Common Options**: Defines the core module options for servers and clients
+- **Platform Adapters**: Implements platform-specific configuration for NixOS, Darwin, and Home Manager
+- **Library Functions**: Provides helper functions for path handling, platform detection, and configuration generation
+
+## Project Structure
+
+This project uses [flake-parts](https://flake.parts/) for a modular structure:
+
+- `modules/` - NixOS, Darwin, and Home Manager modules
+  - `common/` - Shared module definitions and options
+  - `nixos/` - NixOS-specific implementation
+  - `darwin/` - Darwin-specific implementation
+  - `home-manager/` - Home Manager implementation
+- `lib/` - Utility functions used by the modules
+  - `clients.nix` - Client-specific configuration handling
+  - `servers.nix` - Server configuration formatting
+  - `platforms.nix` - Platform detection and path utilities
+  - `paths.nix` - Path manipulation functions
+- `docs/` - Documentation
+  - `examples/` - Usage examples
+  - `modules/` - Module documentation
 
 ## Documentation
 
@@ -172,20 +270,6 @@ This repository is configured to automatically build and deploy documentation to
 The deployment is handled by the [peaceiris/actions-gh-pages](https://github.com/peaceiris/actions-gh-pages) action, which creates a `gh-pages` branch with the documentation. This approach doesn't require any manual configuration of the GitHub Pages environment.
 
 The URL to the generated documentation will be displayed in the GitHub repository details once deployed.
-
-## Project Structure
-
-This project uses [flake-parts](https://flake.parts/) for a modular structure:
-
-- `modules/` - NixOS, Darwin, and Home Manager modules
-  - `common/` - Shared module definitions and options
-  - `nixos/` - NixOS-specific implementation
-  - `darwin/` - Darwin-specific implementation
-  - `home-manager/` - Home Manager implementation
-- `lib/` - Utility functions used by the modules
-- `docs/` - Documentation
-  - `examples/` - Usage examples
-  - `modules/` - Module documentation
 
 ## License
 

@@ -1,10 +1,11 @@
 # lib/clients.nix
-{lib}: let
+{ lib }: let
   inherit (lib.platforms) isDarwin getConfigBase;
 in {
   # List of supported client types
   supportedTypes = [
-    "claude_desktop"
+    "claudeDesktop"
+    "cursor"
   ];
 
   # Get default config path for a client based on system
@@ -15,14 +16,16 @@ in {
     then
       {
         # macOS paths
-        "claude_desktop" = "~/Library/Application Support/Claude/claude_desktop_config.json";
+        "claudeDesktop" = "~/Library/Application Support/Claude/claude_desktop_config.json";
+        "cursor" = "${configBase}/Cursor/mcp-config.json";
       }
       .${clientType}
       or "${configBase}/mcp/${clientType}-config.json"
     else
       {
         # Linux paths
-        "claude_desktop" = "${configBase}/Claude/claude_desktop_config.json";
+        "claudeDesktop" = "${configBase}/Claude/claude_desktop_config.json";
+        "cursor" = "${configBase}/Cursor/mcp-config.json";
       }
       .${clientType}
       or "${configBase}/mcp/${clientType}-config.json";
@@ -32,10 +35,15 @@ in {
     clientType,
     servers,
   }:
-    if clientType == "claude_desktop"
+    if clientType == "claudeDesktop"
     then {
       # Claude Desktop expects mcpServers with key as server name
       # and value as the server configuration
+      mcpServers = servers;
+    }
+    else if clientType == "cursor"
+    then {
+      # Cursor has the same format as Claude Desktop
       mcpServers = servers;
     }
     else {

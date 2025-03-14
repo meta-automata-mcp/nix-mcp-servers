@@ -19,4 +19,13 @@
     if isDarwin system
     then "~/Library/Caches"
     else "~/.cache";
+    
+  # Validate if a path exists and is accessible
+  # This function should be used in activation scripts to validate paths
+  validatePath = path: ''
+    if [ ! -e "${path}" ]; then
+      echo "Warning: Path '${path}' does not exist"
+      mkdir -p "${path}" || echo "Could not create directory '${path}'"
+    fi
+  '';
 }
