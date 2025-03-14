@@ -17,7 +17,7 @@ jobs:
       uses: aloshy-ai/ci/.github/workflows/workflow.yml@main
       with:
         visibility: public
-        build-docs: true
+        build-docs: false
       permissions: write-all
       secrets:
         cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
