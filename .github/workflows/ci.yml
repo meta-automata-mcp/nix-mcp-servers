@@ -18,7 +18,6 @@ jobs:
       with:
         visibility: public
         build-docs: true
-        docs-package: "manualHTML"
       permissions: write-all
       secrets:
         cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}

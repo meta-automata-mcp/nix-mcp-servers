@@ -30,26 +30,18 @@
         pkgs,
         ...
       }: let
-        mcp-servers = pkgs.writeShellScriptBin "mcp-servers" ''
-          echo "MCP Setup CLI"
-          echo "This tool configures MCP clients based on your NixOS/Darwin configuration."
-        '';
-
         # Manual builder from our options-doc module
-        manualHTML = pkgs.callPackage ./modules/documentation/options-doc.nix {
+        docs = pkgs.callPackage ./modules/documentation/options-doc.nix {
           lib = pkgs.lib;
           revision = self.rev or "main";
           version = "0.1.0";
         };
       in {
-        # CLI tool package
-        packages.mcp-servers = mcp-servers;
-
-        # Set the default package
-        packages.default = mcp-servers;
-
         # Documentation output
-        packages.manualHTML = manualHTML;
+        packages.docs = docs;
+
+        # Set docs as the default package
+        packages.default = docs;
       };
 
       flake = {
