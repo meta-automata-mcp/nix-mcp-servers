@@ -7,8 +7,8 @@
   # Import NMD
   nmdSrc = inputs.nmd;
 
-  # Add NMD to the package set
-  nmd = import nmdSrc {inherit lib pkgs;};
+  # Add NMD to the package set - import the builders.nix file specifically
+  nmd = import (nmdSrc + "/builders.nix") {inherit lib pkgs;};
 
   # Helper functions for documentation
   mkOptionsList = pkgs.callPackage (nmdSrc + "/lib/options-to-docbook.nix") {};
