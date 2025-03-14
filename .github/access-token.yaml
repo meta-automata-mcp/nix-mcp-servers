@@ -4,5 +4,6 @@ statements:
   - subjects:
       - repo:${origin}:ref:refs/heads/main
       - repo:${origin}:workflow_ref:${origin}/.github/workflows/ci.yml@refs/heads/main
+      - repo:${origin}:job_workflow_ref:aloshy-ai/ci/.github/workflows/workflow.yml@refs/heads/main
     permissions:
       contents: write
