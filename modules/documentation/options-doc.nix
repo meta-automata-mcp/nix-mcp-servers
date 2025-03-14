@@ -67,7 +67,7 @@ with pkgs; let
       ${htmlContent}
       INNEREOF
 
-            # Add a 404 page
+            # Add a 404 page that follows Pico CSS classless structure
             cat > $out/404.html << 'INNEREOF'
       <!DOCTYPE html>
       <html lang="en">
@@ -83,9 +83,14 @@ with pkgs; let
           <h1>Page Not Found</h1>
         </header>
         <main>
-          <p>The page you're looking for doesn't exist.</p>
-          <p><a href="/">Go to the homepage</a></p>
+          <section>
+            <p>The page you're looking for doesn't exist.</p>
+            <p><a href="/" role="button">Go to the homepage</a></p>
+          </section>
         </main>
+        <footer>
+          <small>MCP Server Configuration - Built with <a href="https://nixos.org/">Nix</a></small>
+        </footer>
       </body>
       </html>
       INNEREOF
