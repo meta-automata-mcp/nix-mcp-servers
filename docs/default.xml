@@ -1,0 +1,57 @@
+<book xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      version="5.0"
+      xml:id="book-mcp-servers-manual">
+ <info>
+  <title>MCP Servers Manual</title>
+ </info>
+ <preface>
+  <title>Preface</title>
+  <para>
+   This manual describes MCP Servers, a configuration management system for
+   various model clients and servers.
+  </para>
+  <para>
+   The manual is structured as follows:
+  </para>
+  <itemizedlist>
+   <listitem>
+    <para>
+     <xref linkend="ch-options" /> lists all available configuration options.
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <xref linkend="ch-guides" /> provides guides on using MCP Servers.
+    </para>
+   </listitem>
+   <listitem>
+    <para>
+     <xref linkend="ch-release-notes" /> lists changes between major versions.
+    </para>
+   </listitem>
+  </itemizedlist>
+ </preface>
+ <chapter xml:id="ch-options">
+  <title>Configuration Options</title>
+  <para>
+   This chapter describes all available configuration options for MCP Servers.
+  </para>
+  <xi:include href="./options.xml" />
+ </chapter>
+ <chapter xml:id="ch-guides">
+  <title>Usage Guides</title>
+  <para>
+   This chapter contains usage guides for MCP Servers.
+  </para>
+  <xi:include href="./guide/getting-started.xml" />
+ </chapter>
+ <chapter xml:id="ch-release-notes">
+  <title>Release Notes</title>
+  <para>
+   This chapter lists release notes for MCP Servers.
+  </para>
+  <xi:include href="./release-notes/release-notes.xml" />
+ </chapter>
+</book> 
