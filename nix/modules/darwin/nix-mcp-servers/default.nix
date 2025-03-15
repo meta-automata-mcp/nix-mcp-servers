@@ -22,6 +22,7 @@
   ...
 }: let
   namespace = "nix-mcp-servers";
+  cfg = config.${namespace};
 in {
   # config.${namespace}.default
 
@@ -42,6 +43,8 @@ in {
   ];
 
   options.${namespace} = with lib.types; {
+    enable = lib.mkEnableOption "Enable MCP Servers";
+
     configPath = lib.mkOption {
       type = str;
       description = "Path where to store MCP configuration files";
@@ -49,10 +52,18 @@ in {
     };
   };
 
-  config = {
+  config = lib.mkIf cfg.enable {
     # This ensures the MCP directory exists
     system.activationScripts.postUserActivation.text = ''
-      mkdir -p "${config.${namespace}.configPath}"
+      mkdir -p "${cfg.configPath}"
     '';
+
+    # Add assertions to ensure proper configuration
+    assertions = [
+      {
+        assertion = !(cfg.clients.claude.enable && cfg.clients.claude.useFilesystemServer) || cfg.servers.filesystem.enable;
+        message = "When Claude is configured to use the filesystem server, the filesystem server must be enabled.";
+      }
+    ];
   };
 }
