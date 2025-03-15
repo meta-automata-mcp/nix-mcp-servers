@@ -24,25 +24,30 @@
     serverCfg = config.${namespace}.servers.${serverType};
   in
     if serverCfg.enable or false
-    then {
-      "${serverType}" =
-        {
-          command = serverCfg.command;
-          args = serverCfg.args;
-        }
-        // (
-          if serverCfg ? env
-          then {inherit (serverCfg) env;}
-          else {}
-        );
-    }
-    else {};
+    then
+      {
+        command = serverCfg.command;
+        args = serverCfg.args;
+      }
+      // (
+        if serverCfg ? env
+        then {env = serverCfg.env;}
+        else {}
+      )
+    else null;
 
   # Collect all enabled servers for this client
-  enabledServers = lib.foldl (
-    acc: serverType:
-      acc // (buildServerConfig serverType)
-  ) {} ["filesystem" "github"];
+  enabledServers = lib.filterAttrs (name: value: value != null) (
+    builtins.listToAttrs (map (
+      serverType: {
+        name = serverType;
+        value =
+          if config.${namespace}.servers.${serverType}.enable or false
+          then buildServerConfig serverType
+          else null;
+      }
+    ) ["filesystem" "github"])
+  );
 
   # The final JSON configuration
   jsonConfig = builtins.toJSON {
@@ -68,12 +73,12 @@ in {
       description = "Path to store the Claude MCP configuration file";
       default =
         if pkgs.stdenv.isDarwin
-        then "${config.home.homeDirectory}/Library/Application Support/claude/mcp/config.json"
-        else "${config.xdg.configHome}/claude/mcp/config.json";
+        then "${config.home.homeDirectory}/Library/Application Support/Claude/claude_desktop_config.json"
+        else "${config.xdg.configHome}/Claude/claude_desktop_config.json";
     };
   };
 
-  config = lib.mkIf (cfg.enable && rootCfg.clients.generateConfigs) {
+  config = mkIf (cfg.enable && rootCfg.clients.generateConfigs) {
     home.file.${cfg.configPath} = {
       text = jsonConfig;
       onChange = ''

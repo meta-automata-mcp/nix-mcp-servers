@@ -16,7 +16,9 @@
   # All other arguments come from the module system.
   config,
   ...
-}: {
+}: let
+  cfg = config.${namespace}.clients;
+in {
   # config.${namespace}.clients.default
 
   imports = [
@@ -30,5 +32,29 @@
       description = "Whether to generate MCP configuration files";
       default = true;
     };
+  };
+
+  # Clean up config files for disabled clients
+  config = {
+    # Handle client configuration files
+    home.file = lib.mkMerge [
+      # Remove Claude config file if disabled
+      (lib.mkIf (!cfg.claude.enable && cfg.generateConfigs) {
+        "${cfg.claude.configPath}" = lib.mkIf (cfg.claude.configPath != null) {
+          text = "";
+          source = null;
+          enable = false;
+        };
+      })
+
+      # Remove Cursor config file if disabled
+      (lib.mkIf (!cfg.cursor.enable && cfg.generateConfigs) {
+        "${cfg.cursor.configPath}" = lib.mkIf (cfg.cursor.configPath != null) {
+          text = "";
+          source = null;
+          enable = false;
+        };
+      })
+    ];
   };
 }
