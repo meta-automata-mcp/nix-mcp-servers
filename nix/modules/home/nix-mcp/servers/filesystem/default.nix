@@ -27,10 +27,14 @@ in {
         then throw "All paths must exist and not contain placeholder text"
         else paths;
     };
+    args = mkOption {
+      type = types.listOf types.str;
+      description = "Arguments to pass to the filesystem server command";
+      default = ["-y" "@modelcontextprotocol/server-filesystem"];
+    };
   };
 
   config = mkIf cfg.enable {
-    command = cfg.command;
-    args = ["-y" "@modelcontextprotocol/server-filesystem"] ++ cfg.paths;
+    ${namespace}.servers.filesystem.args = cfg.args ++ cfg.paths;
   };
 }

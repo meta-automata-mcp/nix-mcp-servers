@@ -30,12 +30,20 @@ in {
         then throw "A valid GitHub Personal Access Token must be provided"
         else validateGithubToken token;
     };
+    args = mkOption {
+      type = types.listOf types.str;
+      description = "Arguments to pass to the GitHub server command";
+      default = ["-y" "@modelcontextprotocol/server-github"];
+    };
+    env = mkOption {
+      type = types.attrsOf types.str;
+      description = "Environment variables to set for the GitHub server";
+      default = {};
+    };
   };
 
   config = mkIf cfg.enable {
-    command = cfg.command;
-    args = ["-y" "@modelcontextprotocol/server-github"];
-    env = {
+    ${namespace}.servers.github.env = {
       GITHUB_PERSONAL_ACCESS_TOKEN = cfg.token;
     };
   };
