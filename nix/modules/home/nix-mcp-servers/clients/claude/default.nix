@@ -2,9 +2,9 @@
   lib,
   config,
   pkgs,
-  namespace,
   ...
 }: let
+  namespace = "nix-mcp-servers";
   cfg = config.${namespace}.clients.claude;
 in {
   options.${namespace}.clients.claude = with lib.types; {
