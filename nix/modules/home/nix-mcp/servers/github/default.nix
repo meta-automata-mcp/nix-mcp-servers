@@ -6,8 +6,7 @@
   namespace,
   ...
 }:
-with lib;
-with lib.nix-mcp; let
+with lib; let
   cfg = config.${namespace}.servers.github;
 
   # Simple token validation function
@@ -17,7 +16,7 @@ with lib.nix-mcp; let
     else throw "Invalid GitHub token format. Should start with 'ghp_', 'ghs_' or 'gho_' followed by alphanumeric characters.";
 in {
   options.${namespace}.servers.github = with types; {
-    enable = mkBoolOpt false "Whether or not to enable the GitHub server.";
+    enable = mkEnableOption "GitHub server";
     command = mkOption {
       type = types.str;
       default = "npx";

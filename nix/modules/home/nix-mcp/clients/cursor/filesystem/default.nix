@@ -6,12 +6,11 @@
   namespace,
   ...
 }:
-with lib;
-with lib.nix-mcp; let
+with lib; let
   cfg = config.${namespace}.clients.cursor.filesystem;
 in {
   options.${namespace}.clients.cursor.filesystem = with types; {
-    enable = mkBoolOpt false "Whether or not to enable the filesystem server in cursor.";
+    enable = mkEnableOption "filesystem server in cursor";
     paths = mkOption {
       type = types.listOf types.str;
       description = "Paths to expose via the filesystem server (at least one required)";

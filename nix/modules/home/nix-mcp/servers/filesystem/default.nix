@@ -6,12 +6,11 @@
   namespace,
   ...
 }:
-with lib;
-with lib.nix-mcp; let
+with lib; let
   cfg = config.${namespace}.servers.filesystem;
 in {
   options.${namespace}.servers.filesystem = with types; {
-    enable = mkBoolOpt false "Whether or not to enable the filesystem server.";
+    enable = mkEnableOption "filesystem server";
     command = mkOption {
       type = types.str;
       default = "npx";

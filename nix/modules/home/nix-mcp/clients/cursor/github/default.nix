@@ -6,12 +6,11 @@
   namespace,
   ...
 }:
-with lib;
-with lib.nix-mcp; let
+with lib; let
   cfg = config.${namespace}.clients.cursor.github;
 in {
   options.${namespace}.clients.cursor.github = with types; {
-    enable = mkBoolOpt false "Whether or not to enable the GitHub server in cursor.";
+    enable = mkEnableOption "GitHub server in cursor";
     token = mkOption {
       type = types.str;
       description = "GitHub Personal Access Token";

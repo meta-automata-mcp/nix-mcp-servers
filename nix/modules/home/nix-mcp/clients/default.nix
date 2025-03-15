@@ -20,8 +20,8 @@
   # config.${namespace}.clients.default
 
   imports = [
-    ./claude
     ./cursor
+    ./claude
   ];
 
   options.${namespace}.clients = with lib.types;
