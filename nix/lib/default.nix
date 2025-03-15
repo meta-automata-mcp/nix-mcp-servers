@@ -19,4 +19,18 @@
     package.overrideAttrs (attrs: {
       meta = (attrs.meta or {}) // meta;
     });
+
+  # Import modules lib
+  modules = import ./modules {inherit lib;};
+
+  # Re-export all module functions at the top level
+  inherit
+    (modules)
+    mkOpt
+    mkOpt'
+    mkBoolOpt
+    mkBoolOpt'
+    enabled
+    disabled
+    ;
 }
