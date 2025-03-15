@@ -7,8 +7,7 @@
   ...
 }:
 with lib;
-with lib.${namespace};
-let
+with lib.${namespace}; let
   cfg = config.${namespace}.clients.claude.github;
 in {
   options.${namespace}.clients.claude.github = with types; {

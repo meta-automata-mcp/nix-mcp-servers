@@ -38,9 +38,7 @@
         };
       };
 
-      # The outputs builder receives an attribute set of your available NixPkgs channels. These are every input that points to a NixPkgs instance (even forks). In this case, the only channel available in this flake is `channels.nixpkgs`.
       outputs-builder = channels: {
-        # Outputs in the outputs builder are transformed to support each system. This entry will be turned into multiple different outputs like `formatter.x86_64-linux.*`.
         formatter = channels.nixpkgs.alejandra;
       };
     };
@@ -48,12 +46,13 @@
     lib.mkFlake {
       alias = {
         packages.default = "docs";
-        modules = {
-          darwin.default = "nix-mcp";
-          home.default = "nix-mcp";
-        };
+        modules.home.default = "nix-mcp";
       };
 
-      outputs-builder = channels: {formatter = channels.nixpkgs.alejandra;};
+      # The outputs builder receives an attribute set of your available NixPkgs channels. These are every input that points to a NixPkgs instance (even forks). In this case, the only channel available in this flake is `channels.nixpkgs`.
+      outputs-builder = channels: {
+        # Outputs in the outputs builder are transformed to support each system. This entry will be turned into multiple different outputs like `formatter.x86_64-linux.*`.
+        formatter = channels.nixpkgs.alejandra;
+      };
     };
 }

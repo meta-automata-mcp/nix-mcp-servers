@@ -1,7 +1,4 @@
-{
-  lib,
-  ...
-}:
+{lib, ...}:
 with lib; rec {
   validateGithubToken = token:
     pkgs.stdenv.mkDerivation {

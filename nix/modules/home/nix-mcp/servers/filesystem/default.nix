@@ -7,8 +7,7 @@
   ...
 }:
 with lib;
-with lib.${namespace};
-let
+with lib.${namespace}; let
   cfg = config.${namespace}.servers.filesystem;
 in {
   options.${namespace}.servers.filesystem = with types; {
