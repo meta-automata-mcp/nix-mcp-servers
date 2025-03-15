@@ -23,4 +23,20 @@
     ./clients
     ./servers
   ];
+
+  options.${namespace} = with lib.types; {
+    configPath = lib.mkOption {
+      type = str;
+      description = "Path where to store MCP configuration files";
+      default =
+        if pkgs.stdenv.isDarwin
+        then "${config.home.homeDirectory}/Library/Application Support/mcp"
+        else "${config.xdg.configHome}/mcp";
+    };
+  };
+
+  config = {
+    # This ensures the MCP directory exists
+    home.file."${config.${namespace}.configPath}/.keep".text = "";
+  };
 }

@@ -23,4 +23,12 @@
     ./claude
     ./cursor
   ];
+
+  options.${namespace}.clients = with lib.types; {
+    generateConfigs = lib.mkOption {
+      type = bool;
+      description = "Whether to generate MCP configuration files";
+      default = true;
+    };
+  };
 }

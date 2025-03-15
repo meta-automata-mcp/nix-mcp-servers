@@ -5,17 +5,131 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/aloshy-ai/nix-mcp-servers/ci.yml?style=for-the-badge&logo=github)](https://github.com/aloshy-ai/nix-mcp-servers/actions)
 [![License](https://img.shields.io/badge/LICENSE-MIT-blue.svg?style=for-the-badge)](./LICENSE)
 
-A Nix flake for managing Model Control Protocol (MCP) server configurations across different clients, with cross-platform support for NixOS, Home Manager, and nix-darwin.
+A Nix flake for declaratively configuring MCP (Model Context Protocol) servers for clients like Claude and Cursor.
 
-## Current Support
+## Features
 
-### Servers
-- **FileSystem**: Local filesystem-based models
-- **GitHub**: GitHub repository access for models
+- Declarative configuration of MCP servers
+- Support for multiple clients (Claude, Cursor)
+- Support for multiple server types (filesystem, github)
+- Cross-platform support (NixOS, Darwin)
+- Uses Home Manager for integration with your existing Nix configuration
 
-### Clients
-- **Claude Desktop**: Anthropic's Claude desktop application
-- **Cursor**: The Cursor AI-powered code editor
+## How it Works
+
+This flake provides Home Manager modules that generate MCP server configuration files for different clients. When you enable a server for a client, the necessary configuration is generated and placed in the appropriate location for that client.
+
+## Supported Servers
+
+- **Filesystem**: Provides filesystem access to AI models
+- **GitHub**: Provides GitHub access to AI models
+
+## Supported Clients
+
+- **Claude**: Anthropic's Claude AI assistant
+- **Cursor**: The Cursor code editor
+
+## Usage
+
+### Basic Usage
+
+Add this flake to your home-manager configuration:
+
+```nix
+{
+  inputs = {
+    # ... your other inputs
+    nix-mcp-servers.url = "github:yourusername/nix-mcp-servers";
+  };
+
+  outputs = { nixpkgs, home-manager, nix-mcp-servers, ... }: {
+    homeConfigurations."yourusername" = home-manager.lib.homeManagerConfiguration {
+      # ... your other configuration
+      modules = [
+        nix-mcp-servers.homeManagerModules.default
+        
+        # Your configuration
+        {
+          nix-mcp = {
+            # Enable configuration generation
+            clients.generateConfigs = true;
+            
+            # Configure Cursor client
+            clients.cursor = {
+              enable = true;
+              
+              # Enable filesystem server for Cursor
+              filesystem = {
+                enable = true;
+                paths = [
+                  "/Users/yourusername/projects"
+                  "/Users/yourusername/Documents"
+                ];
+              };
+              
+              # Enable GitHub server for Cursor
+              github = {
+                enable = true;
+                token = "your-github-token";
+              };
+            };
+            
+            # Configure Claude client
+            clients.claude = {
+              enable = true;
+              
+              # Only enable filesystem for Claude
+              filesystem = {
+                enable = true;
+                paths = [
+                  "/Users/yourusername/projects"
+                ];
+              };
+              
+              # Don't enable GitHub for Claude
+              github.enable = false;
+            };
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+### Custom Configuration Paths
+
+You can customize the configuration paths for each client:
+
+```nix
+{
+  nix-mcp = {
+    # Override base config path
+    configPath = "/custom/path/to/mcp";
+    
+    clients.cursor = {
+      enable = true;
+      # Override Cursor config path
+      configPath = "/custom/path/to/cursor/mcp/config.json";
+      
+      # ...rest of the configuration
+    };
+  };
+}
+```
+
+## Development
+
+To contribute to this project:
+
+1. Clone the repository
+2. Make your changes
+3. Test with `nix flake check`
+4. Submit a PR
+
+## License
+
+[MIT License](LICENSE)
 
 ## Project Overview
 
@@ -270,7 +384,3 @@ This repository is configured to automatically build and deploy documentation to
 The deployment is handled by the [peaceiris/actions-gh-pages](https://github.com/peaceiris/actions-gh-pages) action, which creates a `gh-pages` branch with the documentation. This approach doesn't require any manual configuration of the GitHub Pages environment.
 
 The URL to the generated documentation will be displayed in the GitHub repository details once deployed.
-
-## License
-
-MIT License

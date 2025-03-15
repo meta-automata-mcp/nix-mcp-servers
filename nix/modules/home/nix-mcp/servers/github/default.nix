@@ -9,6 +9,12 @@
 with lib;
 with lib.${namespace}; let
   cfg = config.${namespace}.servers.github;
+
+  # Simple token validation function
+  validateGithubToken = token:
+    if builtins.match "^gh[pst]_[A-Za-z0-9_]{36,255}$" token != null
+    then token
+    else throw "Invalid GitHub token format. Should start with 'ghp_', 'ghs_' or 'gho_' followed by alphanumeric characters.";
 in {
   options.${namespace}.servers.github = with types; {
     enable = mkBoolOpt false "Whether or not to enable the GitHub server.";
@@ -18,7 +24,7 @@ in {
       description = "Command to run the GitHub server";
     };
     token = mkOption {
-      type = types.str.isRequired;
+      type = types.str;
       description = "GitHub Personal Access Token";
       apply = token:
         if token == "" || token == "<YOUR_TOKEN>"

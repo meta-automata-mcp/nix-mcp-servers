@@ -15,11 +15,70 @@
   # All other arguments come from the module system.
   config,
   ...
-}: {
+}: let
+  cfg = config.${namespace}.clients.claude;
+  rootCfg = config.${namespace};
+
+  # This function builds a server configuration for the given server type
+  buildServerConfig = serverType: let
+    serverCfg = config.${namespace}.servers.${serverType};
+  in
+    if serverCfg.enable or false
+    then {
+      "${serverType}" =
+        {
+          command = serverCfg.command;
+          args = serverCfg.args;
+        }
+        // (
+          if serverCfg ? env
+          then {inherit (serverCfg) env;}
+          else {}
+        );
+    }
+    else {};
+
+  # Collect all enabled servers for this client
+  enabledServers = lib.foldl (
+    acc: serverType:
+      acc // (buildServerConfig serverType)
+  ) {} ["filesystem" "github"];
+
+  # The final JSON configuration
+  jsonConfig = builtins.toJSON {
+    mcpServers = enabledServers;
+  };
+in {
   # config.${namespace}.clients.claude.default
 
   imports = [
     ./filesystem
     ./github
   ];
+
+  options.${namespace}.clients.claude = with lib.types; {
+    enable = lib.mkOption {
+      type = bool;
+      description = "Whether to enable the Claude client";
+      default = false;
+    };
+
+    configPath = lib.mkOption {
+      type = str;
+      description = "Path to store the Claude MCP configuration file";
+      default =
+        if pkgs.stdenv.isDarwin
+        then "${config.home.homeDirectory}/Library/Application Support/claude/mcp/config.json"
+        else "${config.xdg.configHome}/claude/mcp/config.json";
+    };
+  };
+
+  config = lib.mkIf (cfg.enable && rootCfg.clients.generateConfigs) {
+    home.file.${cfg.configPath} = {
+      text = jsonConfig;
+      onChange = ''
+        echo "Updated Claude MCP configuration at ${cfg.configPath}"
+      '';
+    };
+  };
 }
