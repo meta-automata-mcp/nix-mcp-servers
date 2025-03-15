@@ -47,7 +47,7 @@
   in
     lib.mkFlake {
       alias = {
-        packages.default = "documentation";
+        packages.default = "docs";
         modules = {
           nixos.default = "nix-mcp";
           darwin.default = "nix-mcp";
