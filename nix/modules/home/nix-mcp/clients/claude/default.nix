@@ -56,8 +56,7 @@ in {
     ./github
   ];
 
-  options.${namespace}.clients.claude = with lib.types;
-  with lib.nix-mcp; {
+  options.${namespace}.clients.claude = with lib.types; {
     enable = lib.mkOption {
       type = bool;
       description = "Whether to enable the Claude client";

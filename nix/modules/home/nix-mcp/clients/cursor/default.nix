@@ -56,8 +56,7 @@ in {
     ./github
   ];
 
-  options.${namespace}.clients.cursor = with lib.types;
-  with lib.nix-mcp; {
+  options.${namespace}.clients.cursor = with lib.types; {
     enable = lib.mkOption {
       type = bool;
       description = "Whether to enable the Cursor client";
