@@ -7,7 +7,7 @@
   ...
 }:
 with lib;
-with lib.${namespace}; let
+with lib.nix-mcp; let
   cfg = config.${namespace}.clients.cursor.filesystem;
 in {
   options.${namespace}.clients.cursor.filesystem = with types; {

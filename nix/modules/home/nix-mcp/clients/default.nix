@@ -24,7 +24,8 @@
     ./cursor
   ];
 
-  options.${namespace}.clients = with lib.types; {
+  options.${namespace}.clients = with lib.types;
+  with lib.nix-mcp; {
     generateConfigs = lib.mkOption {
       type = bool;
       description = "Whether to generate MCP configuration files";

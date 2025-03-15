@@ -7,7 +7,7 @@
   ...
 }:
 with lib;
-with lib.${namespace}; let
+with lib.nix-mcp; let
   cfg = config.${namespace}.servers.filesystem;
 in {
   options.${namespace}.servers.filesystem = with types; {

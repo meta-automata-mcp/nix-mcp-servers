@@ -7,7 +7,7 @@
   ...
 }:
 with lib;
-with lib.${namespace}; let
+with lib.nix-mcp; let
   cfg = config.${namespace}.clients.claude.filesystem;
 in {
   options.${namespace}.clients.claude.filesystem = with types; {
