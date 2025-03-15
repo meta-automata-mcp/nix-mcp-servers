@@ -24,9 +24,9 @@
       snowfall.root = ./nix;
 
       snowfall = {
-        namespace = "nix-mcp";
+        namespace = "nix-mcp-servers";
         meta = {
-          name = "nix-mcp";
+          name = "nix-mcp-servers";
           title = "Nix MCP";
         };
       };
