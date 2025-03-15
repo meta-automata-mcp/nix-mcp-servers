@@ -7,7 +7,8 @@
   ...
 }:
 with lib;
-with lib.${namespace}; let
+with lib.${namespace};
+let
   cfg = config.${namespace}.clients.claude.filesystem;
 in {
   options.${namespace}.clients.claude.filesystem = with types; {

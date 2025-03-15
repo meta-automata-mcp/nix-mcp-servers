@@ -7,7 +7,8 @@
   ...
 }:
 with lib;
-with lib.${namespace}; let
+with lib.${namespace};
+let
   cfg = config.${namespace}.clients.cursor.filesystem;
 in {
   options.${namespace}.clients.cursor.filesystem = with types; {

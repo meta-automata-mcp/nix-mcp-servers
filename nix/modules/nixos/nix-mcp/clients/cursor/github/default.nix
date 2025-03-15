@@ -7,7 +7,8 @@
   ...
 }:
 with lib;
-with lib.${namespace}; let
+with lib.${namespace};
+let
   cfg = config.${namespace}.clients.cursor.github;
 in {
   options.${namespace}.clients.cursor.github = with types; {
