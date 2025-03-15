@@ -24,10 +24,10 @@
 
       snowfall = {
         root = ./nix;
-        namespace = "nix-mcp";
+        namespace = "nix-mcp-servers";
         meta = {
-          name = "nix-mcp";
-          title = "Nix MCP";
+          name = "nix-mcp-servers";
+          title = "Nix MCP Servers";
         };
       };
     };
@@ -39,9 +39,9 @@
 
       alias = {
         packages.default = "docs";
-        modules.nixos.default = "nix-mcp";
-        modules.darwin.default = "nix-mcp";
-        modules.home.default = "nix-mcp";
+        modules.nixos.default = "nix-mcp-servers";
+        modules.darwin.default = "nix-mcp-servers";
+        modules.home.default = "nix-mcp-servers";
       };
 
       outputs-builder = channels: {

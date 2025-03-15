@@ -50,7 +50,7 @@ Add this flake to your home-manager configuration:
         
         # Your configuration
         {
-          nix-mcp = {
+          nix-mcp-servers = {
             # Enable configuration generation
             clients.generateConfigs = true;
             
@@ -103,7 +103,7 @@ You can customize the configuration paths for each client:
 
 ```nix
 {
-  nix-mcp = {
+  nix-mcp-servers = {
     # Override base config path
     configPath = "/custom/path/to/mcp";
     
