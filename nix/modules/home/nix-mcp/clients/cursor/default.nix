@@ -19,6 +19,12 @@
   cfg = config.${namespace}.clients.cursor;
   rootCfg = config.${namespace};
 
+  # Calculate config directory path
+  configDir =
+    if pkgs.stdenv.isDarwin
+    then "${config.home.homeDirectory}/.cursor"
+    else "${config.xdg.configHome}/cursor";
+
   # This function builds a server configuration for the given server type
   buildServerConfig = serverType: let
     serverCfg = config.${namespace}.servers.${serverType};
@@ -79,10 +85,16 @@ in {
   };
 
   config = lib.mkIf (cfg.enable && rootCfg.clients.generateConfigs) {
+    # Ensure config directory exists
+    home.file."${configDir}/.keep" = {
+      text = "";
+    };
+
     home.file.${cfg.configPath} = {
       text = jsonConfig;
       onChange = ''
         echo "Updated Cursor MCP configuration at ${cfg.configPath}"
+        mkdir -p "$(dirname "${cfg.configPath}")"
       '';
     };
   };
