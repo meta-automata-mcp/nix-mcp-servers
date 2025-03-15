@@ -78,7 +78,7 @@ in {
     };
   };
 
-  config = mkIf (cfg.enable && rootCfg.clients.generateConfigs) {
+  config = lib.mkIf (cfg.enable && rootCfg.clients.generateConfigs) {
     home.file.${cfg.configPath} = {
       text = jsonConfig;
       onChange = ''
