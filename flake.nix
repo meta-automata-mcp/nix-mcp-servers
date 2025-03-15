@@ -21,18 +21,26 @@
     lib = inputs.snowfall-lib.mkLib {
       inherit inputs;
       src = ./.;
-      snowfall.root = ./nix;
+
+      snowfall = {
+        root = ./nix;
+        namespace = "nix-mcp";
+        meta = {
+          name = "nix-mcp";
+          title = "Nix MCP";
+        };
+      };
     };
   in
     lib.mkFlake {
-      snowfall.namespace = "nix-mcp-servers";
-
       channels-config = {
         allowUnfree = true;
       };
 
       alias = {
         packages.default = "docs";
+        modules.nixos.default = "nix-mcp";
+        modules.darwin.default = "nix-mcp";
         modules.home.default = "nix-mcp";
       };
 
