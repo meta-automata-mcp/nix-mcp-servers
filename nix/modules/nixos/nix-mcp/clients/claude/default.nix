@@ -16,8 +16,10 @@
   config,
   ...
 }: {
+  # config.${namespace}.clients.claude.default
+
   imports = [
-    ./filesystem.nix
-    ./github.nix
+    ./filesystem
+    ./github
   ];
 }

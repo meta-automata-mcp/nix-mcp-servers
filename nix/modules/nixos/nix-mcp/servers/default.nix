@@ -16,8 +16,10 @@
   config,
   ...
 }: {
+  # config.${namespace}.servers.default
+
   imports = [
-    ./filesystem.nix
-    ./github.nix
+    ./filesystem
+    ./github
   ];
 }
