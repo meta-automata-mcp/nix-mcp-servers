@@ -22,17 +22,11 @@
       inherit inputs;
       src = ./.;
       snowfall.root = ./nix;
-
-      snowfall = {
-        namespace = "nix-mcp-servers";
-        meta = {
-          name = "nix-mcp-servers";
-          title = "Nix MCP";
-        };
-      };
     };
   in
     lib.mkFlake {
+      snowfall.namespace = "nix-mcp-servers";
+
       channels-config = {
         allowUnfree = true;
       };
