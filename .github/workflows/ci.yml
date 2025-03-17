@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
     DeterminateCI:
-      uses: lessuseless/ci/.github/workflows/workflow.yml@main
+      uses: meta-automata-mcp/ci/.github/workflows/workflow.yml@main
       with:
         visibility: public
         build-docs: true
